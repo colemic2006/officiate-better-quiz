@@ -34,7 +34,10 @@ function fail(message) {
 
 function loadRows(path) {
   if (!existsSync(path)) fail(`Spreadsheet not found at "${path}"`)
-  const workbook = XLSX.readFile(path, { raw: false })
+  // codepage 65001 = UTF-8. Without it, SheetJS mis-decodes non-ASCII
+  // characters in CSVs (e.g. em-dashes in category names like
+  // "Personal Fouls — Contact" come out as "Personal Fouls â Contact").
+  const workbook = XLSX.readFile(path, { raw: false, codepage: 65001 })
   const sheetName = workbook.SheetNames[0]
   const sheet = workbook.Sheets[sheetName]
   return XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false })
