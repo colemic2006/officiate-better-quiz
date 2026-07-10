@@ -6,9 +6,9 @@
 // Required env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 // Optional env: SHEET_PATH (default: data/questions.csv)
 
-import { readFileSync, existsSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
-import * as XLSX from 'xlsx'
+import XLSX from 'xlsx'
 
 const SHEET_PATH = process.env.SHEET_PATH || 'data/questions.csv'
 const DIFFICULTIES = new Set(['Basic', 'Intermediate', 'Advanced'])
