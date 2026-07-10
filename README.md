@@ -51,9 +51,8 @@ to `main`. The `ingest` workflow validates every row and — only if the whole
 file is valid — upserts into Supabase, matching on the spreadsheet's
 `question_id` column (stored as `questions.external_id`). Invalid rows fail
 the whole run with row numbers and reasons; nothing is written until the
-file is clean. Missing `rule_refs` is a warning only; missing `explanation`
-is a hard failure, since the schema requires it (`explanation text not null`
-— the spec left this as a TBD, and the schema was written to require it).
+file is clean. Missing `rule_refs` or `explanation` are warnings only —
+both are optional, so leaving either blank still publishes the question.
 
 New tags in the semicolon-delimited `tags` column are auto-created
 (case-insensitive dedupe). Categories must match one of the 20 locked names

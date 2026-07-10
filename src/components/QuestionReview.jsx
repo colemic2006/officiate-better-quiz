@@ -27,10 +27,12 @@ export default function QuestionReview({ question, categoryName, selectedKey, is
           )
         })}
       </div>
-      <p>
-        <strong>Explanation: </strong>
-        {question.explanation}
-      </p>
+      {question.explanation && (
+        <p>
+          <strong>Explanation: </strong>
+          {question.explanation}
+        </p>
+      )}
       {(question.rule_refs || question.ar_refs) && (
         <p className="help-text">
           {question.rule_refs && <>Rule: {question.rule_refs} </>}

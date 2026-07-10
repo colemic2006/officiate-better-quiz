@@ -115,16 +115,13 @@ async function main() {
       }
     }
 
-    // explanation is NOT NULL in the schema, so — unlike rule_refs — a
-    // missing explanation is a hard failure, not just a warning.
-    if (!row.explanation) rowErrors.push('missing explanation (required by schema)')
-
     const ruleYear = Number.parseInt(row.rule_year, 10)
     if (!row.rule_year || Number.isNaN(ruleYear)) {
       rowErrors.push(`rule_year "${row.rule_year}" must be a number`)
     }
 
     if (!row.rule_refs) warnings.push(`row ${rowNum}: missing rule_refs`)
+    if (!row.explanation) warnings.push(`row ${rowNum}: missing explanation`)
 
     if (rowErrors.length > 0) {
       errors.push(`row ${rowNum} (question_id "${row.question_id || '?'}"): ${rowErrors.join('; ')}`)
@@ -147,7 +144,7 @@ async function main() {
       correct_choice: correctChoice,
       rule_refs: row.rule_refs || null,
       ar_refs: row.ar_refs || null,
-      explanation: row.explanation,
+      explanation: row.explanation || null,
       rule_year: ruleYear,
     })
   })

@@ -44,7 +44,7 @@ create table if not exists questions (
   correct_choice char(1) not null check (correct_choice in ('A','B','C','D')),
   rule_refs text,
   ar_refs text,
-  explanation text not null,
+  explanation text,
   rule_year int not null,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
