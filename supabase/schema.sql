@@ -37,10 +37,12 @@ create table if not exists questions (
   category_id int not null references categories(id),
   difficulty text not null check (difficulty in ('Basic','Intermediate','Advanced')),
   question_text text not null,
+  -- At least 2 choices (A/B) are required, e.g. for True/False questions.
+  -- C and D are optional but must be filled in order — no skipping B then D.
   choice_a text not null,
   choice_b text not null,
-  choice_c text not null,
-  choice_d text not null,
+  choice_c text,
+  choice_d text,
   correct_choice char(1) not null check (correct_choice in ('A','B','C','D')),
   rule_refs text,
   ar_refs text,
@@ -48,7 +50,13 @@ create table if not exists questions (
   rule_year int not null,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint choices_contiguous check (choice_d is null or choice_c is not null),
+  constraint correct_choice_has_text check (
+    correct_choice not in ('C', 'D')
+    or (correct_choice = 'C' and choice_c is not null)
+    or (correct_choice = 'D' and choice_d is not null)
+  )
 );
 
 create table if not exists question_tags (

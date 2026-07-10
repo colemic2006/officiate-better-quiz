@@ -3,7 +3,9 @@ import CommentThread from './CommentThread.jsx'
 import FlagButton from './FlagButton.jsx'
 
 export default function QuestionReview({ question, categoryName, selectedKey, isCorrect }) {
-  const choices = ['A', 'B', 'C', 'D'].map((key) => ({ key, text: question[`choice_${key.toLowerCase()}`] }))
+  const choices = ['A', 'B', 'C', 'D']
+    .filter((key) => question[`choice_${key.toLowerCase()}`])
+    .map((key) => ({ key, text: question[`choice_${key.toLowerCase()}`] }))
 
   return (
     <div className="card">

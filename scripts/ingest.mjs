@@ -101,8 +101,12 @@ async function main() {
 
     if (!row.question_text) rowErrors.push('missing question_text')
 
-    for (const c of ['choice_a', 'choice_b', 'choice_c', 'choice_d']) {
-      if (!row[c]) rowErrors.push(`missing ${c}`)
+    // Only A and B are mandatory (e.g. True/False questions). C and D are
+    // optional but must be filled in order — no skipping B then D.
+    if (!row.choice_a) rowErrors.push('missing choice_a')
+    if (!row.choice_b) rowErrors.push('missing choice_b')
+    if (!row.choice_c && row.choice_d) {
+      rowErrors.push('choice_d is filled but choice_c is empty — choices must be contiguous starting from A')
     }
 
     const correctChoice = row.correct_choice.toUpperCase()
@@ -139,8 +143,8 @@ async function main() {
       question_text: row.question_text,
       choice_a: row.choice_a,
       choice_b: row.choice_b,
-      choice_c: row.choice_c,
-      choice_d: row.choice_d,
+      choice_c: row.choice_c || null,
+      choice_d: row.choice_d || null,
       correct_choice: correctChoice,
       rule_refs: row.rule_refs || null,
       ar_refs: row.ar_refs || null,

@@ -103,15 +103,18 @@ function pickFromPoolWithRecencyFallback(pool, recentlyCorrectQuestionIds, rng) 
 }
 
 /**
- * Render-time only: shuffle the four choices into a random display order.
- * Each option keeps its original letter as an opaque identity key, so
- * grading is always by content/identity rather than position.
+ * Render-time only: shuffle the question's choices (2–4 of them — True/False
+ * questions only have A and B) into a random display order. Each option
+ * keeps its original letter as an opaque identity key, so grading is always
+ * by content/identity rather than position.
  */
 export function shuffleChoices(question, rng = Math.random) {
-  const options = ['A', 'B', 'C', 'D'].map((key) => ({
-    key,
-    text: question[`choice_${key.toLowerCase()}`],
-  }))
+  const options = ['A', 'B', 'C', 'D']
+    .filter((key) => question[`choice_${key.toLowerCase()}`])
+    .map((key) => ({
+      key,
+      text: question[`choice_${key.toLowerCase()}`],
+    }))
   for (let i = options.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1))
     ;[options[i], options[j]] = [options[j], options[i]]

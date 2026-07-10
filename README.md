@@ -54,6 +54,12 @@ the whole run with row numbers and reasons; nothing is written until the
 file is clean. Missing `rule_refs` or `explanation` are warnings only —
 both are optional, so leaving either blank still publishes the question.
 
+`choice_a` and `choice_b` are required on every row; `choice_c` and
+`choice_d` are optional, which is what makes True/False (or any
+2- or 3-choice) questions possible — just leave those columns blank.
+They must be filled in order, though: a row with `choice_d` set but
+`choice_c` blank fails validation.
+
 New tags in the semicolon-delimited `tags` column are auto-created
 (case-insensitive dedupe). Categories must match one of the 20 locked names
 in `categories` exactly — adding a new category is a manual admin action
