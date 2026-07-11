@@ -18,6 +18,7 @@ export default function QuizSetup() {
   const [categoryId, setCategoryId] = useState('')
   const [difficulty, setDifficulty] = useState('')
   const [count, setCount] = useState(10)
+  const [showRuleRefs, setShowRuleRefs] = useState(false)
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState('')
 
@@ -81,7 +82,7 @@ export default function QuizSetup() {
         questionCount: questions.length,
       })
 
-      navigate('/quiz/play', { state: { attemptId: attempt.id, mode, questions } })
+      navigate('/quiz/play', { state: { attemptId: attempt.id, mode, questions, showRuleRefs } })
     } catch (err) {
       setError(err.message || 'Something went wrong starting the quiz.')
       setStarting(false)
@@ -153,6 +154,17 @@ export default function QuizSetup() {
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="field">
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 400 }}>
+            <input type="checkbox" checked={showRuleRefs} onChange={(e) => setShowRuleRefs(e.target.checked)} />
+            Show rule references while answering
+          </label>
+          <p className="help-text">
+            Study mode — displays the rule citation for each question up front (when available) so you know
+            where to look it up, instead of only revealing it after you answer.
+          </p>
         </div>
 
         {error && <p className="error-text">{error}</p>}

@@ -9,7 +9,7 @@ import FlagButton from '../components/FlagButton.jsx'
 export default function QuizPlay() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { attemptId, questions } = location.state || {}
+  const { attemptId, questions, showRuleRefs } = location.state || {}
 
   const [index, setIndex] = useState(0)
   const [selectedKey, setSelectedKey] = useState(null)
@@ -69,6 +69,16 @@ export default function QuizPlay() {
           <DifficultyBadge difficulty={question.difficulty} />
         </div>
         <p style={{ fontWeight: 600, fontSize: '1.05rem' }}>{question.question_text}</p>
+
+        {showRuleRefs && !answered && (question.rule_refs || question.ar_refs) && (
+          <div className="rule-hint">
+            <span className="eyebrow">Look it up</span>
+            <div>
+              {question.rule_refs && <>Rule: {question.rule_refs} </>}
+              {question.ar_refs && <>· {question.ar_refs}</>}
+            </div>
+          </div>
+        )}
 
         <div className="choice-list">
           {choices.map((c) => {
