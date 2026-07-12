@@ -7,9 +7,11 @@ No custom backend server.
 ## 1. Set up Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In the SQL Editor, run `supabase/schema.sql` once. This creates every
-   table, the RLS policies, the new-user trigger, and seeds the 20 locked
-   categories (see spec Section 3).
+2. In the SQL Editor, run `supabase/schema.sql`. This creates every table,
+   the RLS policies, the new-user trigger, and seeds the 20 locked categories
+   (see spec Section 3). It's safe to re-run against a project that already
+   has these objects — re-run it any time you pull schema changes (new
+   columns, new RLS policies, etc.) to bring an existing database forward.
 3. Grab your project's **URL**, **anon/public key**, and **service_role key**
    from Settings → API.
 4. To make yourself an admin, run in the SQL Editor (bypasses RLS):
@@ -100,4 +102,22 @@ SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npm run ingest
 ## Pages
 
 Landing/Sign-in · Dashboard · Quiz Setup · Quiz In Progress · Quiz Results ·
-Missed Questions · Admin Moderation Queue · Profile — see spec Section 11.
+Missed Questions · Admin (comment/flag moderation + question bank editor) ·
+Profile — see spec Section 11.
+
+## Admin-only features
+
+- **CFO National Test mode** (Quiz Setup, admin accounts only): runs a quiz
+  drawn solely from a single year's CFO National Test question set (tagged
+  `<year>-cfo-rules-test` at ingestion), independent of category/difficulty.
+  Years are discovered automatically from whatever tags exist — no code
+  change needed when a new test year is ingested.
+- **Question bank editor** (Admin page): search/filter existing questions
+  and edit any field (category, difficulty, text, choices, correct answer,
+  rule/AR refs, explanation, tags, active flag) directly from the browser,
+  without touching `data/questions.csv`. Deactivating a question here just
+  flips `is_active` off — it hides the question from quizzes without
+  deleting it. Note that if that same question's `external_id` later
+  appears in a CSV batch and gets re-ingested, the ingest upsert will
+  overwrite the in-app edit — the CSV is still the source of truth for bulk
+  content.

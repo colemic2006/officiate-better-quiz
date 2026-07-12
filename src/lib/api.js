@@ -58,6 +58,43 @@ export async function fetchQuestionsByCategory(categoryIds, difficulty) {
   return byCategory
 }
 
+// "CFO National Test" questions are tagged by year at ingestion time as
+// `<year>-cfo-rules-test` (e.g. "2025-cfo-rules-test"). This scans the tags
+// table for that pattern instead of hardcoding a year list, so a newly
+// ingested test year shows up automatically.
+const NATIONAL_TEST_TAG_PATTERN = /^(\d{4})-cfo-rules-test$/
+
+export async function fetchNationalTestYears() {
+  const { data, error } = await supabase.from('tags').select('name').ilike('name', '%-cfo-rules-test')
+  if (error) throw error
+  const years = data
+    .map((t) => t.name.match(NATIONAL_TEST_TAG_PATTERN))
+    .filter(Boolean)
+    .map((m) => Number(m[1]))
+  return [...new Set(years)].sort((a, b) => b - a)
+}
+
+export async function fetchQuestionsByTagName(tagName) {
+  const { data: tag, error: tagErr } = await supabase.from('tags').select('id').eq('name', tagName).maybeSingle()
+  if (tagErr) throw tagErr
+  if (!tag) return []
+
+  const { data: links, error: linkErr } = await supabase
+    .from('question_tags')
+    .select('question_id')
+    .eq('tag_id', tag.id)
+  if (linkErr) throw linkErr
+  if (links.length === 0) return []
+
+  const { data: questions, error: qErr } = await supabase
+    .from('questions')
+    .select('*')
+    .in('id', links.map((l) => l.question_id))
+    .eq('is_active', true)
+  if (qErr) throw qErr
+  return questions
+}
+
 export async function fetchUserCategoryStats(userId) {
   const { data, error } = await supabase.from('user_category_stats').select('*').eq('user_id', userId)
   if (error) throw error
@@ -77,7 +114,7 @@ export async function fetchRecentlyCorrectQuestionIds(userId) {
   return new Set(data.map((r) => r.question_id))
 }
 
-export async function createAttempt({ userId, mode, categoryFilter, difficultyFilter, questionCount }) {
+export async function createAttempt({ userId, mode, categoryFilter, difficultyFilter, tagFilter, questionCount }) {
   const { data, error } = await supabase
     .from('attempts')
     .insert({
@@ -85,6 +122,7 @@ export async function createAttempt({ userId, mode, categoryFilter, difficultyFi
       mode,
       category_filter: categoryFilter ?? null,
       difficulty_filter: difficultyFilter ?? null,
+      tag_filter: tagFilter ?? null,
       question_count: questionCount,
     })
     .select()
@@ -227,4 +265,105 @@ export async function moderateComment(id, status) {
 export async function resolveFlag(id, status) {
   const { error } = await supabase.from('question_flags').update({ status }).eq('id', id)
   if (error) throw error
+}
+
+// ---------------------------------------------------------------------------
+// Admin: question bank search + direct edit
+// ---------------------------------------------------------------------------
+
+const ADMIN_SEARCH_LIMIT = 50
+
+export async function adminSearchQuestions({ search, categoryId, includeInactive, limit = ADMIN_SEARCH_LIMIT } = {}) {
+  let query = supabase
+    .from('questions')
+    .select('*, category:categories(name)')
+    .order('external_id')
+    .limit(limit)
+  if (!includeInactive) query = query.eq('is_active', true)
+  if (categoryId) query = query.eq('category_id', categoryId)
+  if (search) {
+    const term = search.trim().replace(/[%,]/g, '')
+    if (term) {
+      const like = `%${term}%`
+      query = query.or(`external_id.ilike.${like},question_text.ilike.${like}`)
+    }
+  }
+  const { data, error } = await query
+  if (error) throw error
+  return data
+}
+
+export async function fetchTagsForQuestions(questionIds) {
+  if (questionIds.length === 0) return new Map()
+  const { data, error } = await supabase
+    .from('question_tags')
+    .select('question_id, tag:tags(name)')
+    .in('question_id', questionIds)
+  if (error) throw error
+  const byQuestion = new Map()
+  for (const row of data) {
+    if (!byQuestion.has(row.question_id)) byQuestion.set(row.question_id, [])
+    byQuestion.get(row.question_id).push(row.tag.name)
+  }
+  return byQuestion
+}
+
+export async function adminUpdateQuestion(id, fields) {
+  const { data, error } = await supabase
+    .from('questions')
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('*, category:categories(name)')
+    .single()
+  if (error) throw error
+  return data
+}
+
+// Replaces a question's tag links with exactly `tagNames` — adding any
+// missing tag rows first (mirrors the auto-create-on-ingest behavior in
+// scripts/ingest.mjs) and removing links for tags no longer wanted.
+export async function adminSetQuestionTags(questionId, tagNames) {
+  const desired = [...new Set(tagNames.map((t) => t.trim()).filter(Boolean))]
+
+  const { data: existingLinks, error: linkErr } = await supabase
+    .from('question_tags')
+    .select('tag_id, tag:tags(name)')
+    .eq('question_id', questionId)
+  if (linkErr) throw linkErr
+
+  const currentNames = new Set(existingLinks.map((l) => l.tag.name))
+  const toAdd = desired.filter((n) => !currentNames.has(n))
+  const toRemoveTagIds = existingLinks.filter((l) => !desired.includes(l.tag.name)).map((l) => l.tag_id)
+
+  if (toRemoveTagIds.length > 0) {
+    const { error } = await supabase
+      .from('question_tags')
+      .delete()
+      .eq('question_id', questionId)
+      .in('tag_id', toRemoveTagIds)
+    if (error) throw error
+  }
+
+  if (toAdd.length > 0) {
+    const { data: existingTags, error: findErr } = await supabase.from('tags').select('id, name').in('name', toAdd)
+    if (findErr) throw findErr
+    const tagIdByName = new Map(existingTags.map((t) => [t.name, t.id]))
+    const missing = toAdd.filter((n) => !tagIdByName.has(n))
+
+    if (missing.length > 0) {
+      const { data: inserted, error: insErr } = await supabase
+        .from('tags')
+        .insert(missing.map((name) => ({ name })))
+        .select('id, name')
+      if (insErr) throw insErr
+      for (const t of inserted) tagIdByName.set(t.name, t.id)
+    }
+
+    const { error: relinkErr } = await supabase
+      .from('question_tags')
+      .insert(toAdd.map((name) => ({ question_id: questionId, tag_id: tagIdByName.get(name) })))
+    if (relinkErr) throw relinkErr
+  }
+
+  return desired
 }

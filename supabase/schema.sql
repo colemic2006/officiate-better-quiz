@@ -69,14 +69,23 @@ create index if not exists idx_question_tags_tag on question_tags(tag_id);
 create table if not exists attempts (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references profiles(id) on delete cascade,
-  mode text not null check (mode in ('adaptive','practice')),
+  mode text not null check (mode in ('adaptive','practice','national_test')),
   category_filter int references categories(id),
   difficulty_filter text,
+  -- Set only for mode = 'national_test': the source tag (e.g. '2025-cfo-rules-test')
+  -- the quiz was drawn from, so history/dashboard views can label it by year.
+  tag_filter text,
   question_count int not null,
   started_at timestamptz not null default now(),
   completed_at timestamptz
 );
 create index if not exists idx_attempts_user on attempts(user_id);
+
+-- Re-running this file against a database created before national_test mode
+-- or tag_filter existed: bring both forward without touching existing rows.
+alter table attempts add column if not exists tag_filter text;
+alter table attempts drop constraint if exists attempts_mode_check;
+alter table attempts add constraint attempts_mode_check check (mode in ('adaptive','practice','national_test'));
 
 create table if not exists attempt_answers (
   id uuid primary key default gen_random_uuid(),
@@ -227,20 +236,58 @@ create policy "profiles: admin can deactivate accounts"
   with check (public.is_admin());
 
 -- categories / tags / questions / question_tags ---------------------------
--- Readable by any authenticated user. Writable only by the service role
--- (used exclusively by the GitHub Actions ingestion workflow), which bypasses
--- RLS entirely — so no insert/update/delete policies are defined here.
+-- Readable by any authenticated user. Bulk writes (new questions, new tags)
+-- happen only via the service role, used exclusively by the GitHub Actions
+-- ingestion workflow, which bypasses RLS entirely. Admins additionally get
+-- narrow write access from the app itself so they can correct existing
+-- questions and their tags from the Admin page without touching the CSV.
 drop policy if exists "categories: read" on categories;
 create policy "categories: read" on categories for select to authenticated using (true);
 
 drop policy if exists "tags: read" on tags;
 create policy "tags: read" on tags for select to authenticated using (true);
 
+-- Admins can create a tag from the question editor (e.g. retagging a
+-- question with a source tag that doesn't exist yet). Renaming/deleting tags
+-- is intentionally not exposed — that's still ingestion-only.
+drop policy if exists "tags: admin insert" on tags;
+create policy "tags: admin insert"
+  on tags for insert
+  to authenticated
+  with check (public.is_admin());
+
 drop policy if exists "questions: read" on questions;
 create policy "questions: read" on questions for select to authenticated using (is_active = true);
 
+-- Admins see inactive questions too, so a question they just deactivated
+-- doesn't disappear from their own admin view.
+drop policy if exists "questions: admin read all" on questions;
+create policy "questions: admin read all"
+  on questions for select
+  to authenticated
+  using (public.is_admin());
+
+-- Admins can edit existing questions (text, choices, category, tags,
+-- active flag, etc.) directly from the Admin page. Creating brand-new
+-- questions or deleting rows outright is still ingestion-only; "deleting" a
+-- question from the admin page just flips is_active off.
+drop policy if exists "questions: admin update" on questions;
+create policy "questions: admin update"
+  on questions for update
+  to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
 drop policy if exists "question_tags: read" on question_tags;
 create policy "question_tags: read" on question_tags for select to authenticated using (true);
+
+-- Admins can relink a question's tags (add/remove) when editing it.
+drop policy if exists "question_tags: admin manage" on question_tags;
+create policy "question_tags: admin manage"
+  on question_tags for all
+  to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
 
 -- attempts -----------------------------------------------------------------
 drop policy if exists "attempts: own rows" on attempts;

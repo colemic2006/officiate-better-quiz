@@ -12,8 +12,23 @@ import SectionHeader from '../components/SectionHeader.jsx'
 
 const WEAK_THRESHOLD = 60
 
+const MODE_LABELS = {
+  adaptive: 'Adaptive',
+  practice: 'Practice',
+  national_test: 'National Test',
+}
+
+function formatAttemptSource(attempt) {
+  if (attempt.category?.name) return attempt.category.name
+  if (attempt.tag_filter) {
+    const year = attempt.tag_filter.match(/^(\d{4})-cfo-rules-test$/)?.[1]
+    return year ? `${year} National Test` : attempt.tag_filter
+  }
+  return 'Mixed'
+}
+
 export default function Dashboard() {
-  const { user } = useAuth()
+  const { user, isAdmin } = useAuth()
   const navigate = useNavigate()
   const [categories, setCategories] = useState([])
   const [statsByCategoryId, setStatsByCategoryId] = useState(new Map())
@@ -79,13 +94,18 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid--2" style={{ marginTop: '1.25rem' }}>
+      <div className={isAdmin ? 'grid grid--3' : 'grid grid--2'} style={{ marginTop: '1.25rem' }}>
         <button className="btn" onClick={() => navigate('/quiz', { state: { mode: 'adaptive' } })}>
           Start Adaptive Quiz
         </button>
         <button className="btn btn--outline" onClick={() => navigate('/quiz', { state: { mode: 'practice' } })}>
           Start Practice Mode
         </button>
+        {isAdmin && (
+          <button className="btn btn--outline" onClick={() => navigate('/quiz', { state: { mode: 'national-test' } })}>
+            Run CFO National Test
+          </button>
+        )}
       </div>
 
       <SectionHeader>Accuracy by Category</SectionHeader>
@@ -128,8 +148,8 @@ export default function Dashboard() {
             {attempts.slice(0, 20).map((a) => (
               <tr key={a.id}>
                 <td>{new Date(a.started_at).toLocaleDateString()}</td>
-                <td style={{ textTransform: 'capitalize' }}>{a.mode}</td>
-                <td>{a.category?.name || 'Mixed'}</td>
+                <td>{MODE_LABELS[a.mode] || a.mode}</td>
+                <td>{formatAttemptSource(a)}</td>
                 <td>{a.question_count}</td>
                 <td>{a.completed_at ? 'Completed' : 'In Progress'}</td>
               </tr>
