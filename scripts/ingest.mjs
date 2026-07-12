@@ -191,10 +191,16 @@ async function main() {
 
   const questionIdByExternal = new Map(upserted.map((q) => [q.external_id, q.id]))
 
-  // Replace tag links for every ingested question.
+  // Replace tag links for every ingested question. Chunked because a single
+  // .in() filter with hundreds of UUIDs can exceed the request URL length
+  // limit and get rejected with a Bad Request.
   const questionIds = validRows.map((r) => questionIdByExternal.get(r.external_id))
-  const { error: deleteErr } = await supabase.from('question_tags').delete().in('question_id', questionIds)
-  if (deleteErr) fail(`Failed to clear old tag links: ${deleteErr.message}`)
+  const DELETE_CHUNK_SIZE = 150
+  for (let i = 0; i < questionIds.length; i += DELETE_CHUNK_SIZE) {
+    const chunk = questionIds.slice(i, i + DELETE_CHUNK_SIZE)
+    const { error: deleteErr } = await supabase.from('question_tags').delete().in('question_id', chunk)
+    if (deleteErr) fail(`Failed to clear old tag links: ${deleteErr.message}`)
+  }
 
   const links = []
   for (const r of validRows) {
