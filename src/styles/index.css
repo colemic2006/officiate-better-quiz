@@ -345,6 +345,14 @@ button {
   color: #7a5c00;
 }
 
+.badge--id {
+  background: transparent;
+  color: var(--text-mid);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 0.02em;
+}
+
 /* -------------------------------------------------------------------- */
 /* Tables + filter bar                                                  */
 /* -------------------------------------------------------------------- */

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { shuffleChoices, isCorrectAnswer } from '../lib/quizEngine'
 import { recordAnswer, completeAttempt } from '../lib/api'
-import { CategoryBadge, DifficultyBadge } from '../components/Badge.jsx'
+import { CategoryBadge, DifficultyBadge, QuestionIdBadge } from '../components/Badge.jsx'
 import CommentThread from '../components/CommentThread.jsx'
 import FlagButton from '../components/FlagButton.jsx'
 
@@ -64,9 +64,10 @@ export default function QuizPlay() {
       </p>
 
       <div className="card">
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
           <CategoryBadge name={question.category?.name || question.categoryName || ''} />
           <DifficultyBadge difficulty={question.difficulty} />
+          <QuestionIdBadge id={question.external_id} />
         </div>
         <p style={{ fontWeight: 600, fontSize: '1.05rem' }}>{question.question_text}</p>
 
