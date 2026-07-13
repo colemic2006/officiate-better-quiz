@@ -7,7 +7,8 @@ import SectionHeader from '../components/SectionHeader.jsx'
 export default function Profile() {
   const { user, profile, refreshProfile, signOut } = useAuth()
   const navigate = useNavigate()
-  const [displayName, setDisplayName] = useState(profile?.display_name || '')
+  const [firstName, setFirstName] = useState(profile?.first_name || '')
+  const [lastName, setLastName] = useState(profile?.last_name || '')
   const [conference, setConference] = useState(profile?.conference || '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -16,6 +17,10 @@ export default function Profile() {
   async function handleSave(e) {
     e.preventDefault()
     setError('')
+    if (!firstName.trim() || !lastName.trim()) {
+      setError('Please enter your first and last name.')
+      return
+    }
     if (!conference.trim()) {
       setError('Please enter the officiating conference you work for.')
       return
@@ -25,7 +30,12 @@ export default function Profile() {
     try {
       const { error: err } = await supabase
         .from('profiles')
-        .update({ display_name: displayName, conference: conference.trim() })
+        .update({
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          display_name: `${firstName.trim()} ${lastName.trim()}`,
+          conference: conference.trim(),
+        })
         .eq('id', user.id)
       if (err) setError(err.message)
       else {
@@ -51,9 +61,15 @@ export default function Profile() {
             <label>Email</label>
             <input value={user.email} disabled />
           </div>
-          <div className="field">
-            <label htmlFor="displayName">Display Name</label>
-            <input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+          <div className="grid grid--2">
+            <div className="field">
+              <label htmlFor="firstName">First Name</label>
+              <input id="firstName" required value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+            </div>
+            <div className="field">
+              <label htmlFor="lastName">Last Name</label>
+              <input id="lastName" required value={lastName} onChange={(e) => setLastName(e.target.value)} />
+            </div>
           </div>
           <div className="field">
             <label htmlFor="conference">Officiating Conference</label>

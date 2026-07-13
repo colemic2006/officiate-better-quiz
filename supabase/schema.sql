@@ -10,6 +10,12 @@ create extension if not exists pgcrypto;
 
 create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
+  -- Required at signup (enforced client-side) as separate first/last name
+  -- fields rather than a free-form handle; display_name is derived from
+  -- them ("First Last") and kept as its own column since it's what
+  -- comments/flags/admin views already read.
+  first_name text,
+  last_name text,
   display_name text,
   -- Officiating conference/association the user works for. Required at
   -- signup (enforced client-side) so admins can see who's on what crew;
@@ -22,9 +28,11 @@ create table if not exists profiles (
   created_at timestamptz not null default now()
 );
 
--- Re-running this file against a database created before `conference`
--- existed: bring the column forward without touching existing rows.
+-- Re-running this file against a database created before these columns
+-- existed: bring them forward without touching existing rows.
 alter table profiles add column if not exists conference text;
+alter table profiles add column if not exists first_name text;
+alter table profiles add column if not exists last_name text;
 
 create table if not exists categories (
   id serial primary key,
@@ -163,10 +171,15 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, display_name, conference)
+  insert into public.profiles (id, first_name, last_name, display_name, conference)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data->>'display_name', split_part(new.email, '@', 1)),
+    new.raw_user_meta_data->>'first_name',
+    new.raw_user_meta_data->>'last_name',
+    coalesce(
+      nullif(trim(concat_ws(' ', new.raw_user_meta_data->>'first_name', new.raw_user_meta_data->>'last_name')), ''),
+      split_part(new.email, '@', 1)
+    ),
     new.raw_user_meta_data->>'conference'
   )
   on conflict (id) do nothing;

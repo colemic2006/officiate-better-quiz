@@ -7,7 +7,8 @@ export default function Home() {
   const [mode, setMode] = useState('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [displayName, setDisplayName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [conference, setConference] = useState('')
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
@@ -19,9 +20,15 @@ export default function Home() {
     e.preventDefault()
     setError('')
     setInfo('')
-    if (mode === 'signup' && !conference.trim()) {
-      setError('Please enter the officiating conference you work for.')
-      return
+    if (mode === 'signup') {
+      if (!firstName.trim() || !lastName.trim()) {
+        setError('Please enter your first and last name.')
+        return
+      }
+      if (!conference.trim()) {
+        setError('Please enter the officiating conference you work for.')
+        return
+      }
     }
     setSubmitting(true)
     try {
@@ -29,7 +36,7 @@ export default function Home() {
         const { error: err } = await signIn(email, password)
         if (err) setError(err.message)
       } else {
-        const { error: err } = await signUp(email, password, displayName, conference.trim())
+        const { error: err } = await signUp(email, password, firstName.trim(), lastName.trim(), conference.trim())
         if (err) setError(err.message)
         else setInfo('Check your email to confirm your account, then sign in.')
       }
@@ -71,21 +78,21 @@ export default function Home() {
           </div>
           <form onSubmit={handleSubmit}>
             {mode === 'signup' && (
-              <div className="field">
-                <label htmlFor="displayName">Display Name</label>
-                <input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+              <div className="grid grid--2">
+                <div className="field">
+                  <label htmlFor="firstName">First Name</label>
+                  <input id="firstName" required value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="lastName">Last Name</label>
+                  <input id="lastName" required value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                </div>
               </div>
             )}
             {mode === 'signup' && (
               <div className="field">
                 <label htmlFor="conference">Officiating Conference</label>
-                <input
-                  id="conference"
-                  required
-                  placeholder="e.g. Big 12, Southland, ACC"
-                  value={conference}
-                  onChange={(e) => setConference(e.target.value)}
-                />
+                <input id="conference" required value={conference} onChange={(e) => setConference(e.target.value)} />
                 <p className="help-text">The conference or association you officiate for.</p>
               </div>
             )}
