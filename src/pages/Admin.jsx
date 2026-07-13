@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   fetchPendingComments,
   fetchOpenFlags,
@@ -27,6 +27,7 @@ export default function Admin() {
   const [questionsLoading, setQuestionsLoading] = useState(false)
   const [questionsError, setQuestionsError] = useState('')
   const [editingId, setEditingId] = useState(null)
+  const editFormRef = useRef(null)
 
   async function load() {
     const [c, f] = await Promise.all([fetchPendingComments(), fetchOpenFlags()])
@@ -85,6 +86,12 @@ export default function Admin() {
     setTagsByQuestionId((prev) => new Map(prev).set(updated.id, newTags))
     setEditingId(null)
   }
+
+  useEffect(() => {
+    if (editingId && editFormRef.current) {
+      editFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [editingId])
 
   if (loading) return <div className="page">Loading…</div>
 
@@ -196,16 +203,6 @@ export default function Admin() {
 
       {questionsError && <p className="error-text">{questionsError}</p>}
 
-      {editingId && (
-        <QuestionEditForm
-          question={questions.find((q) => q.id === editingId)}
-          tags={tagsByQuestionId.get(editingId) || []}
-          categories={categories}
-          onSaved={handleSaved}
-          onCancel={() => setEditingId(null)}
-        />
-      )}
-
       {questions.length === 0 ? (
         <p className="muted">
           {questionsLoading ? 'Loading…' : 'No questions match — try a broader search.'}
@@ -253,6 +250,18 @@ export default function Admin() {
             <p className="help-text">Showing the first 50 matches — narrow your search to see more.</p>
           )}
         </>
+      )}
+
+      {editingId && (
+        <div ref={editFormRef}>
+          <QuestionEditForm
+            question={questions.find((q) => q.id === editingId)}
+            tags={tagsByQuestionId.get(editingId) || []}
+            categories={categories}
+            onSaved={handleSaved}
+            onCancel={() => setEditingId(null)}
+          />
+        </div>
       )}
     </div>
   )
