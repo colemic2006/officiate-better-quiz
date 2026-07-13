@@ -78,7 +78,61 @@ Run it locally against your own project with:
 SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npm run ingest
 ```
 
-## 5. Architecture notes / known trade-offs
+## 5. Signup notification email
+
+Every new registration sends a notification email (via [Resend](https://resend.com))
+to the site owner. Flow: a Postgres trigger on `profiles` insert calls the
+`notify-signup` Edge Function (async, via `pg_net`), which looks up the new
+user's email through the Admin API and sends the notification through Resend.
+
+One-time setup:
+
+1. Create a free [Resend](https://resend.com) account and grab an API key
+   from the dashboard. The function sends from `onboarding@resend.dev`,
+   Resend's shared sandbox sender, which works out of the box with no domain
+   verification — fine for a low-volume notification like this, but if
+   emails start landing in spam, verify your own sending domain in Resend
+   and change the `from` address in
+   `supabase/functions/notify-signup/index.ts`.
+2. Generate a random secret (e.g. `openssl rand -hex 32`) — this authenticates
+   calls to the Edge Function so it can't be spammed by anyone who finds the
+   URL. Use the same value in the next two steps.
+3. Deploy the function and set its secrets with the [Supabase CLI](https://supabase.com/docs/guides/cli):
+   ```
+   supabase link --project-ref <your-project-ref>
+   supabase functions deploy notify-signup
+   supabase secrets set RESEND_API_KEY=<your-resend-api-key>
+   supabase secrets set WEBHOOK_SECRET=<the-random-secret-from-step-2>
+   ```
+   (Pushes to `main` that touch `supabase/functions/**` also auto-deploy the
+   function via `deploy-functions.yml` — see repo secrets below — but
+   `functions deploy` needs to be run at least once manually to create it,
+   and `secrets set` isn't something CI does for you.)
+4. In the SQL Editor, set the two Postgres settings the trigger reads (not
+   committed to `schema.sql` since this is a public repo):
+   ```sql
+   alter database postgres set app.supabase_url = 'https://<your-project-ref>.supabase.co';
+   alter database postgres set app.webhook_secret = '<the-random-secret-from-step-2>';
+   ```
+5. Re-run `supabase/schema.sql` to install the `pg_net` extension and the
+   trigger.
+6. To change the notification recipient away from the default
+   (`mcole1008@outlook.com`), set an additional secret:
+   `supabase secrets set NOTIFY_EMAIL=<address>`.
+
+For the auto-deploy workflow, add these to GitHub repo secrets too:
+
+| Secret | Used by | Purpose |
+|---|---|---|
+| `SUPABASE_ACCESS_TOKEN` | `deploy-functions.yml` | personal access token from Supabase account settings, used by the CLI |
+| `SUPABASE_PROJECT_REF` | `deploy-functions.yml` | your project's ref (the subdomain in its URL) |
+
+If either the `app.supabase_url` or `app.webhook_secret` Postgres setting is
+left unset, the trigger silently no-ops rather than failing signup itself —
+so an unconfigured environment just won't send notifications, not break
+registration.
+
+## 6. Architecture notes / known trade-offs
 
 - **Answer key exposure:** per the spec's own RLS notes, the `questions`
   table (including `correct_choice`) is readable by any authenticated user —
