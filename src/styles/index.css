@@ -504,11 +504,12 @@ table.data-table tr:last-child td {
 }
 
 .accuracy-bar-row__value {
-  width: 3.5rem;
+  width: 6rem;
   text-align: right;
   font-size: 0.82rem;
   font-weight: 700;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .comment {
