@@ -14,9 +14,10 @@ import QuizResults from './pages/QuizResults.jsx'
 import MissedQuestions from './pages/MissedQuestions.jsx'
 import Admin from './pages/Admin.jsx'
 import Profile from './pages/Profile.jsx'
+import ResetPassword from './pages/ResetPassword.jsx'
 
 export default function App() {
-  const { user, deactivatedNotice, clearDeactivatedNotice } = useAuth()
+  const { user, deactivatedNotice, clearDeactivatedNotice, passwordRecovery } = useAuth()
   const [stats, setStats] = useState(null)
 
   useEffect(() => {
@@ -71,6 +72,9 @@ export default function App() {
           </div>
         </div>
       )}
+      {passwordRecovery ? (
+        <ResetPassword />
+      ) : (
       <Routes>
         <Route path="/" element={<Home />} />
         <Route
@@ -130,6 +134,7 @@ export default function App() {
           }
         />
       </Routes>
+      )}
       <Footer />
     </div>
   )

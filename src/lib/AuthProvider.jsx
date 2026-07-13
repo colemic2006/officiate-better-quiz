@@ -8,6 +8,11 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [deactivatedNotice, setDeactivatedNotice] = useState(false)
+  // True after the user lands here via a "reset your password" email link.
+  // Supabase establishes a real (short-lived) session for this, but we want
+  // to force the "set a new password" screen rather than let them into the
+  // app normally until they've done that.
+  const [passwordRecovery, setPasswordRecovery] = useState(false)
 
   const loadProfile = useCallback(async (userId) => {
     const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
@@ -47,6 +52,8 @@ export function AuthProvider({ children }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      if (_event === 'PASSWORD_RECOVERY') setPasswordRecovery(true)
+
       if (!newSession) {
         setSession(null)
         setProfile(null)
@@ -88,6 +95,24 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut()
   }, [])
 
+  const requestPasswordReset = useCallback(async (email) => {
+    // No hash path here on purpose — Supabase appends the recovery tokens
+    // to the URL hash, which would collide with HashRouter's own use of
+    // the hash for routing. Redirecting to the bare site root lets
+    // supabase-js auto-detect the tokens from the URL before the router
+    // ever gets a chance to interpret them as a path; onAuthStateChange
+    // then flips passwordRecovery, and App.jsx takes it from there.
+    const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}`
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+    return { error }
+  }, [])
+
+  const updatePassword = useCallback(async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (!error) setPasswordRecovery(false)
+    return { error }
+  }, [])
+
   const refreshProfile = useCallback(async () => {
     if (!session) return
     const p = await loadProfile(session.user.id)
@@ -102,10 +127,13 @@ export function AuthProvider({ children }) {
     loading,
     deactivatedNotice,
     clearDeactivatedNotice: () => setDeactivatedNotice(false),
+    passwordRecovery,
     signUp,
     signIn,
     signOut,
     refreshProfile,
+    requestPasswordReset,
+    updatePassword,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

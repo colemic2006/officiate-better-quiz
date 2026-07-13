@@ -19,6 +19,12 @@ No custom backend server.
    update profiles set is_admin = true where id = '<your-auth-user-uuid>';
    ```
    Find your UUID under Authentication → Users after signing up once.
+5. Under Authentication → URL Configuration, add your deployed site's root
+   URL (e.g. `https://<user>.github.io/officiate-better-quiz/`) to **Redirect
+   URLs**. This is required for the "forgot password" email link to land
+   back on the app instead of falling back to Supabase's default — without
+   it, password reset requests still send, but the link in the email won't
+   go anywhere useful.
 
 ## 2. Configure the frontend
 
