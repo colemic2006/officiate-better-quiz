@@ -8,6 +8,7 @@ export default function Home() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
+  const [conference, setConference] = useState('')
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -18,13 +19,17 @@ export default function Home() {
     e.preventDefault()
     setError('')
     setInfo('')
+    if (mode === 'signup' && !conference.trim()) {
+      setError('Please enter the officiating conference you work for.')
+      return
+    }
     setSubmitting(true)
     try {
       if (mode === 'signin') {
         const { error: err } = await signIn(email, password)
         if (err) setError(err.message)
       } else {
-        const { error: err } = await signUp(email, password, displayName)
+        const { error: err } = await signUp(email, password, displayName, conference.trim())
         if (err) setError(err.message)
         else setInfo('Check your email to confirm your account, then sign in.')
       }
@@ -69,6 +74,19 @@ export default function Home() {
               <div className="field">
                 <label htmlFor="displayName">Display Name</label>
                 <input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+              </div>
+            )}
+            {mode === 'signup' && (
+              <div className="field">
+                <label htmlFor="conference">Officiating Conference</label>
+                <input
+                  id="conference"
+                  required
+                  placeholder="e.g. Big 12, Southland, ACC"
+                  value={conference}
+                  onChange={(e) => setConference(e.target.value)}
+                />
+                <p className="help-text">The conference or association you officiate for.</p>
               </div>
             )}
             <div className="field">
