@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Header from './components/Header.jsx'
+import Footer from './components/Footer.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import { useAuth } from './lib/AuthProvider.jsx'
 import { fetchCategories, fetchQuestionCount, fetchUserCategoryStats, fetchAttemptHistory, computeStreakDays } from './lib/api'
@@ -129,6 +130,7 @@ export default function App() {
           }
         />
       </Routes>
+      <Footer />
     </div>
   )
 }
