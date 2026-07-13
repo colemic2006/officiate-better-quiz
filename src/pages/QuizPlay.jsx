@@ -13,7 +13,7 @@ export default function QuizPlay() {
 
   const [index, setIndex] = useState(0)
   const [selectedKey, setSelectedKey] = useState(null)
-  const [answered, setAnswered] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
   const [reviews, setReviews] = useState([])
   const [saving, setSaving] = useState(false)
 
@@ -26,25 +26,29 @@ export default function QuizPlay() {
     return null
   }
 
-  async function handleSelect(key) {
-    if (answered) return
+  function handleChoose(key) {
+    if (submitted) return
     setSelectedKey(key)
-    setAnswered(true)
+  }
+
+  async function handleSubmit() {
+    if (submitted || selectedKey === null) return
+    setSubmitted(true)
     setSaving(true)
-    const correct = isCorrectAnswer(question, key)
+    const correct = isCorrectAnswer(question, selectedKey)
     try {
-      await recordAnswer({ attemptId, question, selectedKey: key })
+      await recordAnswer({ attemptId, question, selectedKey })
     } finally {
       setSaving(false)
     }
-    setReviews((prev) => [...prev, { question, selectedKey: key, isCorrect: correct }])
+    setReviews((prev) => [...prev, { question, selectedKey, isCorrect: correct }])
   }
 
   async function handleNext() {
     if (index + 1 < questions.length) {
       setIndex(index + 1)
       setSelectedKey(null)
-      setAnswered(false)
+      setSubmitted(false)
     } else {
       await completeAttempt(attemptId)
       const score = reviews.filter((r) => r.isCorrect).length
@@ -57,7 +61,7 @@ export default function QuizPlay() {
   return (
     <div className="page">
       <div className="progress-track">
-        <div className="progress-fill" style={{ width: `${((index + (answered ? 1 : 0)) / questions.length) * 100}%` }} />
+        <div className="progress-fill" style={{ width: `${((index + (submitted ? 1 : 0)) / questions.length) * 100}%` }} />
       </div>
       <p className="help-text">
         Question {index + 1} of {questions.length}
@@ -71,7 +75,7 @@ export default function QuizPlay() {
         </div>
         <p style={{ fontWeight: 600, fontSize: '1.05rem' }}>{question.question_text}</p>
 
-        {showRuleRefs && !answered && (question.rule_refs || question.ar_refs) && (
+        {showRuleRefs && !submitted && (question.rule_refs || question.ar_refs) && (
           <div className="rule-hint">
             <span className="eyebrow">Look it up</span>
             <div>
@@ -84,19 +88,27 @@ export default function QuizPlay() {
         <div className="choice-list">
           {choices.map((c) => {
             let cls = 'choice-btn'
-            if (answered) {
+            if (submitted) {
               if (c.key === question.correct_choice) cls += ' choice-btn--correct'
               else if (c.key === selectedKey) cls += ' choice-btn--incorrect'
+            } else if (c.key === selectedKey) {
+              cls += ' choice-btn--selected'
             }
             return (
-              <button key={c.key} className={cls} disabled={answered} onClick={() => handleSelect(c.key)}>
+              <button key={c.key} className={cls} disabled={submitted} onClick={() => handleChoose(c.key)}>
                 {c.text}
               </button>
             )
           })}
         </div>
 
-        {answered && (
+        {!submitted && (
+          <button className="btn" onClick={handleSubmit} disabled={selectedKey === null}>
+            Submit Answer
+          </button>
+        )}
+
+        {submitted && (
           <>
             <p>
               <strong>{selectedKey === question.correct_choice ? 'Correct! ' : 'Incorrect. '}</strong>

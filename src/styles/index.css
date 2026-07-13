@@ -464,6 +464,12 @@ table.data-table tr:last-child td {
   background: rgba(192, 57, 43, 0.08);
 }
 
+.choice-btn--selected {
+  border-color: var(--navy);
+  background: rgba(15, 27, 45, 0.06);
+  font-weight: 600;
+}
+
 .progress-track {
   height: 6px;
   border-radius: 999px;
