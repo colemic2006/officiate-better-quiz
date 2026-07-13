@@ -113,10 +113,7 @@ export default function Dashboard() {
         {categoryRows.map((c) => (
           <div className="accuracy-bar-row" key={c.id}>
             <span className="accuracy-bar-row__label">{c.name}</span>
-            <div
-              className="accuracy-bar-track"
-              style={c.accuracy !== null && c.accuracy < WEAK_THRESHOLD ? { borderColor: '#c0392b' } : undefined}
-            >
+            <div className="accuracy-bar-track">
               <div
                 className="accuracy-bar-fill"
                 style={{
