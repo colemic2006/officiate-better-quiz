@@ -124,6 +124,20 @@ async function main() {
       rowErrors.push(`rule_year "${row.rule_year}" must be a number`)
     }
 
+    // Optional: the question's number within its original source document
+    // (e.g. "9" for Question 9 of a weekly quiz PDF). Blank is fine — not
+    // every source maps cleanly to a single number — but if present it must
+    // be a positive integer.
+    let sourceQuestionNumber = null
+    if (row.source_question_number) {
+      const parsed = Number.parseInt(row.source_question_number, 10)
+      if (Number.isNaN(parsed) || parsed < 1) {
+        rowErrors.push(`source_question_number "${row.source_question_number}" must be a positive integer`)
+      } else {
+        sourceQuestionNumber = parsed
+      }
+    }
+
     if (!row.rule_refs) warnings.push(`row ${rowNum}: missing rule_refs`)
     if (!row.explanation) warnings.push(`row ${rowNum}: missing explanation`)
 
@@ -150,6 +164,7 @@ async function main() {
       ar_refs: row.ar_refs || null,
       explanation: row.explanation || null,
       rule_year: ruleYear,
+      source_question_number: sourceQuestionNumber,
     })
   })
 

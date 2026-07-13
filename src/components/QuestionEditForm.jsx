@@ -20,6 +20,7 @@ function buildFormState(question, tags) {
     explanation: question.explanation || '',
     is_active: question.is_active,
     tags: tags.join(';'),
+    source_question_number: question.source_question_number != null ? String(question.source_question_number) : '',
   }
 }
 
@@ -35,6 +36,10 @@ function validate(form) {
   if (!DIFFICULTIES.includes(form.difficulty)) return 'Difficulty must be Basic, Intermediate, or Advanced.'
   if (!form.rule_year.trim() || Number.isNaN(Number.parseInt(form.rule_year, 10))) {
     return 'Rule year must be a number.'
+  }
+  if (form.source_question_number.trim()) {
+    const n = Number.parseInt(form.source_question_number, 10)
+    if (Number.isNaN(n) || n < 1) return 'Source question number must be a positive whole number.'
   }
   return null
 }
@@ -73,6 +78,9 @@ export default function QuestionEditForm({ question, tags, categories, onSaved, 
         ar_refs: form.ar_refs.trim() || null,
         explanation: form.explanation.trim() || null,
         is_active: form.is_active,
+        source_question_number: form.source_question_number.trim()
+          ? Number.parseInt(form.source_question_number, 10)
+          : null,
       })
       const newTags = await adminSetQuestionTags(
         question.id,
@@ -169,11 +177,23 @@ export default function QuestionEditForm({ question, tags, categories, onSaved, 
           <input id="edit-rule-year" type="number" value={form.rule_year} onChange={(e) => set('rule_year', e.target.value)} />
         </div>
         <div className="field">
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 400 }}>
-            <input type="checkbox" checked={form.is_active} onChange={(e) => set('is_active', e.target.checked)} />
-            Active (visible in quizzes)
-          </label>
+          <label htmlFor="edit-source-question-number">Source Question # (optional)</label>
+          <input
+            id="edit-source-question-number"
+            type="number"
+            min="1"
+            value={form.source_question_number}
+            onChange={(e) => set('source_question_number', e.target.value)}
+          />
+          <p className="help-text">Question number in the original source document, if known.</p>
         </div>
+      </div>
+
+      <div className="field">
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 400 }}>
+          <input type="checkbox" checked={form.is_active} onChange={(e) => set('is_active', e.target.checked)} />
+          Active (visible in quizzes)
+        </label>
       </div>
 
       <div className="field">

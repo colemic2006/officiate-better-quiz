@@ -11,10 +11,20 @@ create extension if not exists pgcrypto;
 create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text,
+  -- Officiating conference/association the user works for. Required at
+  -- signup (enforced client-side) so admins can see who's on what crew;
+  -- left nullable here rather than not-null so it doesn't break profile
+  -- rows created outside the app's signup form (e.g. a Supabase dashboard
+  -- invite).
+  conference text,
   is_admin boolean not null default false,
   is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
+
+-- Re-running this file against a database created before `conference`
+-- existed: bring the column forward without touching existing rows.
+alter table profiles add column if not exists conference text;
 
 create table if not exists categories (
   id serial primary key,
@@ -48,6 +58,12 @@ create table if not exists questions (
   ar_refs text,
   explanation text,
   rule_year int not null,
+  -- Question number within the original source document (e.g. "9" for
+  -- Question 9 of a weekly quiz PDF), so a content issue can be traced back
+  -- to the source. Nullable/optional: not every question's source doc is
+  -- structured as a clean numbered list we can map 1:1 (e.g. the CFO
+  -- National Test batches), so this is left blank rather than guessed.
+  source_question_number int,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -65,6 +81,10 @@ create table if not exists question_tags (
   primary key (question_id, tag_id)
 );
 create index if not exists idx_question_tags_tag on question_tags(tag_id);
+
+-- Re-running this file against a database created before source_question_number
+-- existed: bring the column forward without touching existing rows.
+alter table questions add column if not exists source_question_number int;
 
 create table if not exists attempts (
   id uuid primary key default gen_random_uuid(),
@@ -143,8 +163,12 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, display_name)
-  values (new.id, coalesce(new.raw_user_meta_data->>'display_name', split_part(new.email, '@', 1)))
+  insert into public.profiles (id, display_name, conference)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'display_name', split_part(new.email, '@', 1)),
+    new.raw_user_meta_data->>'conference'
+  )
   on conflict (id) do nothing;
   return new;
 end;

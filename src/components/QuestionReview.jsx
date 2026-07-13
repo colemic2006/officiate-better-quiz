@@ -12,7 +12,7 @@ export default function QuestionReview({ question, categoryName, selectedKey, is
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
         {categoryName && <CategoryBadge name={categoryName} />}
         <DifficultyBadge difficulty={question.difficulty} />
-        <QuestionIdBadge id={question.external_id} />
+        <QuestionIdBadge id={question.external_id} sourceNumber={question.source_question_number} />
         <span className={`badge ${isCorrect ? 'badge--ruling' : ''}`} style={!isCorrect ? { background: '#c0392b', color: '#fff' } : undefined}>
           {isCorrect ? 'Correct' : 'Incorrect'}
         </span>
