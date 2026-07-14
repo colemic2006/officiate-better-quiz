@@ -77,11 +77,11 @@ export function AuthProvider({ children }) {
     }
   }, [loadProfile])
 
-  const signUp = useCallback(async (email, password, firstName, lastName, conference) => {
+  const signUp = useCallback(async (email, password, firstName, lastName) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { first_name: firstName, last_name: lastName, conference } },
+      options: { data: { first_name: firstName, last_name: lastName } },
     })
     return { error }
   }, [])

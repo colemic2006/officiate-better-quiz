@@ -21,10 +21,6 @@ export default function Profile() {
       setError('Please enter your first and last name.')
       return
     }
-    if (!conference.trim()) {
-      setError('Please enter the officiating conference you work for.')
-      return
-    }
     setSaving(true)
     setSaved(false)
     try {
@@ -34,7 +30,7 @@ export default function Profile() {
           first_name: firstName.trim(),
           last_name: lastName.trim(),
           display_name: `${firstName.trim()} ${lastName.trim()}`,
-          conference: conference.trim(),
+          conference: conference.trim() || null,
         })
         .eq('id', user.id)
       if (err) setError(err.message)
@@ -72,8 +68,8 @@ export default function Profile() {
             </div>
           </div>
           <div className="field">
-            <label htmlFor="conference">Officiating Conference</label>
-            <input id="conference" required value={conference} onChange={(e) => setConference(e.target.value)} />
+            <label htmlFor="conference">Officiating Conference (optional)</label>
+            <input id="conference" value={conference} onChange={(e) => setConference(e.target.value)} />
           </div>
           {profile?.is_admin && <p className="help-text">Admin account</p>}
           {error && <p className="error-text">{error}</p>}

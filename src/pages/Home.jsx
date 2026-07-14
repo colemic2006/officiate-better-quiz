@@ -9,7 +9,6 @@ export default function Home() {
   const [password, setPassword] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [conference, setConference] = useState('')
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -20,15 +19,9 @@ export default function Home() {
     e.preventDefault()
     setError('')
     setInfo('')
-    if (mode === 'signup') {
-      if (!firstName.trim() || !lastName.trim()) {
-        setError('Please enter your first and last name.')
-        return
-      }
-      if (!conference.trim()) {
-        setError('Please enter the officiating conference you work for.')
-        return
-      }
+    if (mode === 'signup' && (!firstName.trim() || !lastName.trim())) {
+      setError('Please enter your first and last name.')
+      return
     }
     setSubmitting(true)
     try {
@@ -40,7 +33,7 @@ export default function Home() {
         if (err) setError(err.message)
         else setInfo('If that email has an account, a password reset link is on its way — check your inbox.')
       } else {
-        const { error: err } = await signUp(email, password, firstName.trim(), lastName.trim(), conference.trim())
+        const { error: err } = await signUp(email, password, firstName.trim(), lastName.trim())
         if (err) setError(err.message)
         else setInfo('Check your email to confirm your account, then sign in.')
       }
@@ -97,13 +90,6 @@ export default function Home() {
                   <label htmlFor="lastName">Last Name</label>
                   <input id="lastName" required value={lastName} onChange={(e) => setLastName(e.target.value)} />
                 </div>
-              </div>
-            )}
-            {mode === 'signup' && (
-              <div className="field">
-                <label htmlFor="conference">Officiating Conference</label>
-                <input id="conference" required value={conference} onChange={(e) => setConference(e.target.value)} />
-                <p className="help-text">The conference or association you officiate for.</p>
               </div>
             )}
             <div className="field">
