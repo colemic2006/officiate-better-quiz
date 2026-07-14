@@ -246,6 +246,56 @@ as $$
   select coalesce((select is_admin from public.profiles where id = auth.uid()), false);
 $$;
 
+-- Lets the Admin page list every registered user with their email and last
+-- login time, neither of which lives on public.profiles or is exposed to
+-- PostgREST — auth.users is a protected schema. Security-definer + an
+-- internal admin check (rather than RLS, which can only restrict by row,
+-- not by column) is the sanctioned way to read from it safely: any
+-- authenticated user can call this function, but only admins get past the
+-- check inside it.
+create or replace function public.admin_list_users()
+returns table (
+  id uuid,
+  first_name text,
+  last_name text,
+  display_name text,
+  email text,
+  conference text,
+  is_admin boolean,
+  is_active boolean,
+  created_at timestamptz,
+  last_sign_in_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+    select
+      p.id,
+      p.first_name,
+      p.last_name,
+      p.display_name,
+      au.email,
+      p.conference,
+      p.is_admin,
+      p.is_active,
+      p.created_at,
+      au.last_sign_in_at
+    from public.profiles p
+    join auth.users au on au.id = p.id
+    order by p.created_at desc;
+end;
+$$;
+
+revoke all on function public.admin_list_users() from public;
+grant execute on function public.admin_list_users() to authenticated;
+
 -- Atomic increment for the rolling per-user/category stats that drive
 -- adaptive weighting. Runs as the caller (security invoker, the default) so
 -- the existing "own rows" RLS policy on user_category_stats still applies —

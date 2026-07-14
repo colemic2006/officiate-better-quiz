@@ -8,6 +8,7 @@ import {
   adminSearchQuestions,
   fetchTagsForQuestions,
   adminUpdateQuestion,
+  fetchAdminUserDirectory,
 } from '../lib/api'
 import SectionHeader from '../components/SectionHeader.jsx'
 import { CategoryBadge, DifficultyBadge } from '../components/Badge.jsx'
@@ -29,6 +30,10 @@ export default function Admin() {
   const [editingId, setEditingId] = useState(null)
   const editFormRef = useRef(null)
 
+  const [users, setUsers] = useState([])
+  const [usersLoading, setUsersLoading] = useState(true)
+  const [usersError, setUsersError] = useState('')
+
   async function load() {
     const [c, f] = await Promise.all([fetchPendingComments(), fetchOpenFlags()])
     setComments(c)
@@ -36,8 +41,21 @@ export default function Admin() {
     setLoading(false)
   }
 
+  async function loadUsers() {
+    setUsersLoading(true)
+    setUsersError('')
+    try {
+      setUsers(await fetchAdminUserDirectory())
+    } catch (err) {
+      setUsersError(err.message || 'Failed to load registered users.')
+    } finally {
+      setUsersLoading(false)
+    }
+  }
+
   useEffect(() => {
     load()
+    loadUsers()
     fetchCategories().then(setCategories)
     runQuestionSearch()
   }, [])
@@ -97,6 +115,42 @@ export default function Admin() {
 
   return (
     <div className="page">
+      <SectionHeader>Registered Users</SectionHeader>
+      {usersError && <p className="error-text">{usersError}</p>}
+      {usersLoading ? (
+        <p className="muted">Loading…</p>
+      ) : users.length === 0 ? (
+        <p className="muted">No registered users yet.</p>
+      ) : (
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Conference</th>
+              <th>Signed Up</th>
+              <th>Last Login</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((u) => (
+              <tr key={u.id}>
+                <td>
+                  {[u.first_name, u.last_name].filter(Boolean).join(' ') || u.display_name || '—'}
+                  {u.is_admin && ' (admin)'}
+                </td>
+                <td>{u.email}</td>
+                <td>{u.conference || '—'}</td>
+                <td>{new Date(u.created_at).toLocaleDateString()}</td>
+                <td>{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString() : 'Never'}</td>
+                <td>{u.is_active ? 'Active' : 'Deactivated'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
       <SectionHeader>Pending Comments</SectionHeader>
       {comments.length === 0 ? (
         <p className="muted">No comments awaiting review.</p>

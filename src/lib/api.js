@@ -367,3 +367,13 @@ export async function adminSetQuestionTags(questionId, tagNames) {
 
   return desired
 }
+
+// ---------------------------------------------------------------------------
+// Admin: registered user directory
+// ---------------------------------------------------------------------------
+
+export async function fetchAdminUserDirectory() {
+  const { data, error } = await supabase.rpc('admin_list_users')
+  if (error) throw error
+  return data
+}
