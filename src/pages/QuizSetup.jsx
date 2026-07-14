@@ -171,7 +171,7 @@ export default function QuizSetup() {
             {mode === 'adaptive' && 'Mixes categories, weighted toward your weak areas. You still pick the difficulty.'}
             {mode === 'practice' && 'You pick a single category and difficulty.'}
             {mode === 'national-test' &&
-              'Draws only from a specific year\'s CFO National Test question set, independent of category or difficulty.'}
+              'Draws only from a specific year\'s CFO National Test question set, independent of category or difficulty. Some questions have been adjusted to reflect 2026 rule changes.'}
           </p>
         </div>
 
