@@ -33,6 +33,7 @@ export default function Admin() {
   const [users, setUsers] = useState([])
   const [usersLoading, setUsersLoading] = useState(true)
   const [usersError, setUsersError] = useState('')
+  const [usersVisible, setUsersVisible] = useState(false)
 
   async function load() {
     const [c, f] = await Promise.all([fetchPendingComments(), fetchOpenFlags()])
@@ -115,40 +116,49 @@ export default function Admin() {
 
   return (
     <div className="page">
-      <SectionHeader>Registered Users</SectionHeader>
-      {usersError && <p className="error-text">{usersError}</p>}
-      {usersLoading ? (
-        <p className="muted">Loading…</p>
-      ) : users.length === 0 ? (
-        <p className="muted">No registered users yet.</p>
-      ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Conference</th>
-              <th>Signed Up</th>
-              <th>Last Login</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr key={u.id}>
-                <td>
-                  {[u.first_name, u.last_name].filter(Boolean).join(' ') || u.display_name || '—'}
-                  {u.is_admin && ' (admin)'}
-                </td>
-                <td>{u.email}</td>
-                <td>{u.conference || '—'}</td>
-                <td>{new Date(u.created_at).toLocaleDateString()}</td>
-                <td>{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString() : 'Never'}</td>
-                <td>{u.is_active ? 'Active' : 'Deactivated'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <SectionHeader>Registered Users {!usersLoading && `(${users.length})`}</SectionHeader>
+        <button className="btn btn--sm btn--outline" onClick={() => setUsersVisible((v) => !v)}>
+          {usersVisible ? 'Hide' : 'Show'}
+        </button>
+      </div>
+      {usersVisible && (
+        <>
+          {usersError && <p className="error-text">{usersError}</p>}
+          {usersLoading ? (
+            <p className="muted">Loading…</p>
+          ) : users.length === 0 ? (
+            <p className="muted">No registered users yet.</p>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Conference</th>
+                  <th>Signed Up</th>
+                  <th>Last Login</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((u) => (
+                  <tr key={u.id}>
+                    <td>
+                      {[u.first_name, u.last_name].filter(Boolean).join(' ') || u.display_name || '—'}
+                      {u.is_admin && ' (admin)'}
+                    </td>
+                    <td>{u.email}</td>
+                    <td>{u.conference || '—'}</td>
+                    <td>{new Date(u.created_at).toLocaleDateString()}</td>
+                    <td>{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString() : 'Never'}</td>
+                    <td>{u.is_active ? 'Active' : 'Deactivated'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </>
       )}
 
       <SectionHeader>Pending Comments</SectionHeader>
