@@ -239,7 +239,7 @@ begin
       p.first_name,
       p.last_name,
       p.display_name,
-      au.email,
+      au.email::text,
       p.conference,
       p.is_admin,
       p.is_active,
