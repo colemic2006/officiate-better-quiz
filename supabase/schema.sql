@@ -3,9 +3,6 @@
 -- Idempotent-ish: safe to re-run on a project that already has these objects.
 
 create extension if not exists pgcrypto;
--- Lets Postgres make outbound HTTP calls (used to notify the admin's email
--- via an Edge Function whenever a new user registers — see Section 2).
-create extension if not exists pg_net;
 
 -- ============================================================================
 -- 1. Tables
@@ -194,45 +191,6 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
-
--- Fires the notify-signup Edge Function (async, via pg_net) whenever a new
--- profile is created, so the site owner gets an email for every new
--- registration. The Edge Function URL and a shared secret are read from
--- Postgres settings rather than hardcoded here, since this file is
--- committed to a public repo -- set them once per environment:
---   alter database postgres set app.supabase_url = 'https://<ref>.supabase.co';
---   alter database postgres set app.webhook_secret = '<random-string>';
--- (the same webhook_secret value must also be set as an Edge Function
--- secret: supabase secrets set WEBHOOK_SECRET=<same-random-string>).
--- If either setting is unset, this silently no-ops rather than erroring
--- out the signup itself.
-create or replace function public.notify_admin_of_signup()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  base_url text := current_setting('app.supabase_url', true);
-  secret text := current_setting('app.webhook_secret', true);
-begin
-  if base_url is null or base_url = '' or secret is null or secret = '' then
-    return new;
-  end if;
-
-  perform net.http_post(
-    url := base_url || '/functions/v1/notify-signup',
-    headers := jsonb_build_object('Content-Type', 'application/json', 'x-webhook-secret', secret),
-    body := jsonb_build_object('record', to_jsonb(new))
-  );
-  return new;
-end;
-$$;
-
-drop trigger if exists on_profile_created_notify_admin on profiles;
-create trigger on_profile_created_notify_admin
-  after insert on profiles
-  for each row execute function public.notify_admin_of_signup();
 
 -- Helper used inside RLS policies to check the caller's admin flag without
 -- re-triggering RLS recursion on profiles.
