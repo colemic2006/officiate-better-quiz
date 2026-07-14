@@ -7,8 +7,6 @@ export default function Home() {
   const [mode, setMode] = useState('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -19,10 +17,6 @@ export default function Home() {
     e.preventDefault()
     setError('')
     setInfo('')
-    if (mode === 'signup' && (!firstName.trim() || !lastName.trim())) {
-      setError('Please enter your first and last name.')
-      return
-    }
     setSubmitting(true)
     try {
       if (mode === 'signin') {
@@ -33,7 +27,7 @@ export default function Home() {
         if (err) setError(err.message)
         else setInfo('If that email has an account, a password reset link is on its way — check your inbox.')
       } else {
-        const { error: err } = await signUp(email, password, firstName.trim(), lastName.trim())
+        const { error: err } = await signUp(email, password)
         if (err) setError(err.message)
         else setInfo('Check your email to confirm your account, then sign in.')
       }
@@ -80,18 +74,6 @@ export default function Home() {
             </div>
           )}
           <form onSubmit={handleSubmit}>
-            {mode === 'signup' && (
-              <div className="grid grid--2">
-                <div className="field">
-                  <label htmlFor="firstName">First Name</label>
-                  <input id="firstName" required value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-                </div>
-                <div className="field">
-                  <label htmlFor="lastName">Last Name</label>
-                  <input id="lastName" required value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                </div>
-              </div>
-            )}
             <div className="field">
               <label htmlFor="email">Email</label>
               <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
