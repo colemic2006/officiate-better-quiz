@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthProvider.jsx'
+import GuestQuiz from '../components/GuestQuiz.jsx'
 
 export default function Home() {
   const { user, signIn, signUp, requestPasswordReset } = useAuth()
@@ -134,6 +135,10 @@ export default function Home() {
             )}
           </form>
         </div>
+      </div>
+
+      <div style={{ marginTop: '3rem', maxWidth: '40rem' }}>
+        <GuestQuiz />
       </div>
     </div>
   )

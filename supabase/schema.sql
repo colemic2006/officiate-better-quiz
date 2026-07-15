@@ -254,6 +254,44 @@ $$;
 revoke all on function public.admin_list_users() from public;
 grant execute on function public.admin_list_users() to authenticated;
 
+-- Lets a signed-out visitor try a handful of questions on the front page
+-- without an account. The `questions` table's own read policy is
+-- authenticated-only, so this is security-definer with a narrow,
+-- read-only, fixed-shape result (active questions only, capped count) —
+-- deliberately not a general anon SELECT grant on the table itself.
+create or replace function public.random_questions(p_count int default 5)
+returns table (
+  id uuid,
+  external_id text,
+  category_name text,
+  difficulty text,
+  question_text text,
+  choice_a text,
+  choice_b text,
+  choice_c text,
+  choice_d text,
+  correct_choice char(1),
+  rule_refs text,
+  ar_refs text,
+  explanation text
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select q.id, q.external_id, c.name, q.difficulty, q.question_text,
+    q.choice_a, q.choice_b, q.choice_c, q.choice_d, q.correct_choice,
+    q.rule_refs, q.ar_refs, q.explanation
+  from public.questions q
+  join public.categories c on c.id = q.category_id
+  where q.is_active = true
+  order by random()
+  limit least(greatest(p_count, 1), 10);
+$$;
+
+revoke all on function public.random_questions(int) from public;
+grant execute on function public.random_questions(int) to anon, authenticated;
+
 -- Atomic increment for the rolling per-user/category stats that drive
 -- adaptive weighting. Runs as the caller (security invoker, the default) so
 -- the existing "own rows" RLS policy on user_category_stats still applies —

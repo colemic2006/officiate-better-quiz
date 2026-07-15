@@ -1,6 +1,16 @@
 import { supabase } from './supabaseClient'
 import { RECENCY_WINDOW_DAYS, isCorrectAnswer } from './quizEngine'
 
+// Signed-out visitors: a handful of random questions via the security-definer
+// RPC (the `questions` table itself is authenticated-only). Shape is already
+// flat (category_name instead of a nested category object) since it's not
+// reused by the logged-in quiz flow.
+export async function fetchGuestQuizQuestions(count = 5) {
+  const { data, error } = await supabase.rpc('random_questions', { p_count: count })
+  if (error) throw error
+  return data
+}
+
 export async function fetchCategories() {
   const { data, error } = await supabase.from('categories').select('*').order('sort_order')
   if (error) throw error
