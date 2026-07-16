@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { shuffleChoices, isCorrectAnswer } from '../lib/quizEngine'
 import { recordAnswer, completeAttempt } from '../lib/api'
+import { useAuth } from '../lib/AuthProvider.jsx'
 import { CategoryBadge, DifficultyBadge, QuestionIdBadge } from '../components/Badge.jsx'
 import CommentThread from '../components/CommentThread.jsx'
 import FlagButton from '../components/FlagButton.jsx'
@@ -9,6 +10,7 @@ import FlagButton from '../components/FlagButton.jsx'
 export default function QuizPlay() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { attemptId, questions, showRuleRefs } = location.state || {}
 
   const [index, setIndex] = useState(0)
@@ -37,7 +39,7 @@ export default function QuizPlay() {
     setSaving(true)
     const correct = isCorrectAnswer(question, selectedKey)
     try {
-      await recordAnswer({ attemptId, question, selectedKey })
+      await recordAnswer({ attemptId, userId: user.id, question, selectedKey })
     } finally {
       setSaving(false)
     }

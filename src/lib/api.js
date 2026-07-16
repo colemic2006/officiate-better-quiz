@@ -141,7 +141,7 @@ export async function createAttempt({ userId, mode, categoryFilter, difficultyFi
   return data
 }
 
-export async function recordAnswer({ attemptId, question, selectedKey }) {
+export async function recordAnswer({ attemptId, userId, question, selectedKey }) {
   const correct = isCorrectAnswer(question, selectedKey)
   const { error: answerErr } = await supabase.from('attempt_answers').insert({
     attempt_id: attemptId,
@@ -151,9 +151,8 @@ export async function recordAnswer({ attemptId, question, selectedKey }) {
   })
   if (answerErr) throw answerErr
 
-  const { data: attempt } = await supabase.from('attempts').select('user_id').eq('id', attemptId).single()
   const { error: statErr } = await supabase.rpc('increment_category_stat', {
-    p_user_id: attempt.user_id,
+    p_user_id: userId,
     p_category_id: question.category_id,
     p_correct: correct,
   })
