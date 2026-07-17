@@ -1,6 +1,22 @@
 import { supabase } from './supabaseClient'
 import { RECENCY_WINDOW_DAYS, isCorrectAnswer } from './quizEngine'
 
+// PostgREST caps a single response at the project's max-rows (1000 by default),
+// so an unbounded `select('*')` silently drops everything past the first page —
+// and with no explicit order those are the lowest-id rows, so newer questions
+// never surface in a quiz. Page through with a stable order to fetch them all.
+const PAGE_SIZE = 1000
+
+async function fetchAllRows(buildQuery) {
+  const all = []
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await buildQuery().range(from, from + PAGE_SIZE - 1)
+    if (error) throw error
+    all.push(...data)
+    if (data.length < PAGE_SIZE) return all
+  }
+}
+
 // Signed-out visitors: a handful of random questions via the security-definer
 // RPC (the `questions` table itself is authenticated-only). Shape is already
 // flat (category_name instead of a nested category object) since it's not
@@ -56,10 +72,16 @@ export function computeStreakDays(attempts) {
 }
 
 export async function fetchQuestionsByCategory(categoryIds, difficulty) {
-  let query = supabase.from('questions').select('*').in('category_id', categoryIds).eq('is_active', true)
-  if (difficulty) query = query.eq('difficulty', difficulty)
-  const { data, error } = await query
-  if (error) throw error
+  const data = await fetchAllRows(() => {
+    let query = supabase
+      .from('questions')
+      .select('*')
+      .in('category_id', categoryIds)
+      .eq('is_active', true)
+      .order('id', { ascending: true })
+    if (difficulty) query = query.eq('difficulty', difficulty)
+    return query
+  })
   const byCategory = new Map()
   for (const q of data) {
     if (!byCategory.has(q.category_id)) byCategory.set(q.category_id, [])
@@ -96,13 +118,15 @@ export async function fetchQuestionsByTagName(tagName) {
   if (linkErr) throw linkErr
   if (links.length === 0) return []
 
-  const { data: questions, error: qErr } = await supabase
-    .from('questions')
-    .select('*')
-    .in('id', links.map((l) => l.question_id))
-    .eq('is_active', true)
-  if (qErr) throw qErr
-  return questions
+  const questionIds = links.map((l) => l.question_id)
+  return fetchAllRows(() =>
+    supabase
+      .from('questions')
+      .select('*')
+      .in('id', questionIds)
+      .eq('is_active', true)
+      .order('id', { ascending: true })
+  )
 }
 
 export async function fetchUserCategoryStats(userId) {
