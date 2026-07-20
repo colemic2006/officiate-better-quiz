@@ -44,7 +44,16 @@ function validate(form) {
   return null
 }
 
-export default function QuestionEditForm({ question, tags, categories, onSaved, onCancel }) {
+export default function QuestionEditForm({
+  question,
+  tags,
+  categories,
+  onSaved,
+  onCancel,
+  saveLabel = 'Save Changes',
+  savingLabel = 'Saving…',
+  cancelLabel = 'Cancel',
+}) {
   const [form, setForm] = useState(() => buildFormState(question, tags))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -206,10 +215,10 @@ export default function QuestionEditForm({ question, tags, categories, onSaved, 
 
       <div style={{ display: 'flex', gap: '0.5rem' }}>
         <button className="btn" onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving…' : 'Save Changes'}
+          {saving ? savingLabel : saveLabel}
         </button>
         <button className="btn btn--outline" onClick={onCancel} disabled={saving}>
-          Cancel
+          {cancelLabel}
         </button>
       </div>
     </div>

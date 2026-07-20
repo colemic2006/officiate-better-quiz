@@ -13,6 +13,7 @@ import {
 import SectionHeader from '../components/SectionHeader.jsx'
 import { CategoryBadge, DifficultyBadge } from '../components/Badge.jsx'
 import QuestionEditForm from '../components/QuestionEditForm.jsx'
+import QuestionReviewQueue from '../components/QuestionReviewQueue.jsx'
 
 export default function Admin() {
   const [comments, setComments] = useState([])
@@ -34,6 +35,8 @@ export default function Admin() {
   const [usersLoading, setUsersLoading] = useState(true)
   const [usersError, setUsersError] = useState('')
   const [usersVisible, setUsersVisible] = useState(false)
+
+  const [reviewOpen, setReviewOpen] = useState(false)
 
   async function load() {
     const [c, f] = await Promise.all([fetchPendingComments(), fetchOpenFlags()])
@@ -116,6 +119,23 @@ export default function Admin() {
 
   return (
     <div className="page">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <SectionHeader>Editorial Review</SectionHeader>
+        {!reviewOpen && (
+          <button className="btn btn--sm" onClick={() => setReviewOpen(true)}>
+            Start / Resume Review
+          </button>
+        )}
+      </div>
+      {reviewOpen ? (
+        <QuestionReviewQueue categories={categories} onClose={() => setReviewOpen(false)} />
+      ) : (
+        <p className="muted">
+          Walk through every question one at a time — edit as needed and mark each complete. Your progress is saved,
+          so you can stop and pick up where you left off.
+        </p>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
         <SectionHeader>Registered Users {!usersLoading && `(${users.length})`}</SectionHeader>
         <button className="btn btn--sm btn--outline" onClick={() => setUsersVisible((v) => !v)}>

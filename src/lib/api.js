@@ -402,6 +402,55 @@ export async function adminSetQuestionTags(questionId, tagNames) {
 }
 
 // ---------------------------------------------------------------------------
+// Admin: editorial review workflow
+// ---------------------------------------------------------------------------
+
+// Lightweight ordered list of every question (optionally within one category)
+// used to drive the review queue: progress counts, position, and navigation.
+// Only the columns the queue needs, paged past the 1000-row cap.
+export async function fetchReviewQueue({ categoryId = null } = {}) {
+  return fetchAllRows(() => {
+    let q = supabase
+      .from('questions')
+      .select('id, external_id, reviewed_at, category_id')
+      .order('external_id', { ascending: true })
+    if (categoryId) q = q.eq('category_id', categoryId)
+    return q
+  })
+}
+
+// Full question row (with category name) for the one currently being edited.
+export async function fetchQuestionById(id) {
+  const { data, error } = await supabase
+    .from('questions')
+    .select('*, category:categories(name)')
+    .eq('id', id)
+    .single()
+  if (error) throw error
+  return data
+}
+
+// Mark a question reviewed (or clear it). Stamps who/when so the admin view
+// can show sign-off. Relies on the "questions: admin update" RLS policy.
+export async function markQuestionReviewed(id, reviewed) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('questions')
+    .update({
+      reviewed_at: reviewed ? new Date().toISOString() : null,
+      reviewed_by: reviewed ? user?.id ?? null : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select('*, category:categories(name)')
+    .single()
+  if (error) throw error
+  return data
+}
+
+// ---------------------------------------------------------------------------
 // Admin: registered user directory
 // ---------------------------------------------------------------------------
 

@@ -94,6 +94,15 @@ create index if not exists idx_question_tags_tag on question_tags(tag_id);
 -- existed: bring the column forward without touching existing rows.
 alter table questions add column if not exists source_question_number int;
 
+-- Editorial review workflow: an admin walks the whole bank one question at a
+-- time, edits as needed, and marks each complete. `reviewed_at` null means the
+-- question hasn't been reviewed yet; a timestamp records when it was signed off
+-- and `reviewed_by` records which admin did it. Both are writable by admins via
+-- the existing "questions: admin update" RLS policy — no new policy needed.
+alter table questions add column if not exists reviewed_at timestamptz;
+alter table questions add column if not exists reviewed_by uuid references profiles(id);
+create index if not exists idx_questions_reviewed_at on questions(reviewed_at);
+
 create table if not exists attempts (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references profiles(id) on delete cascade,
