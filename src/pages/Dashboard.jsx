@@ -9,7 +9,13 @@ import {
   computeStreakDays,
   completeAttempt,
   cancelAttempt,
+  cancelAllInProgressAttempts,
+  fetchAnsweredQuestionIds,
+  fetchRecentlyCorrectQuestionIds,
+  fetchQuestionsByCategory,
+  fetchQuestionsByTagName,
 } from '../lib/api'
+import { selectAdaptiveQuestions, selectPracticeQuestions } from '../lib/quizEngine'
 import SectionHeader from '../components/SectionHeader.jsx'
 
 const WEAK_THRESHOLD = 60
@@ -92,6 +98,99 @@ export default function Dashboard() {
     }
   }
 
+  async function handleCancelAll() {
+    const count = attempts.filter((a) => !a.completed_at).length
+    if (count === 0) return
+    if (!window.confirm(`Cancel all ${count} in-progress quizzes? They will be permanently removed.`)) return
+    setActionError('')
+    setBusyAttemptId('all')
+    try {
+      await cancelAllInProgressAttempts(user.id)
+      setAttempts((prev) => prev.filter((a) => a.completed_at))
+    } catch (err) {
+      setActionError(err.message || 'Failed to cancel the in-progress quizzes.')
+    } finally {
+      setBusyAttemptId(null)
+    }
+  }
+
+  // Continue an abandoned attempt: the original question set isn't stored, so
+  // we re-draw the remaining questions from the attempt's own settings
+  // (mode/category/difficulty/tag), excluding any already answered, and hand
+  // them to the play screen bound to the same attempt id.
+  async function handleResume(attempt) {
+    setActionError('')
+    setBusyAttemptId(attempt.id)
+    try {
+      const [answeredIds, recentlyCorrect] = await Promise.all([
+        fetchAnsweredQuestionIds(attempt.id),
+        fetchRecentlyCorrectQuestionIds(user.id),
+      ])
+      const remaining = attempt.question_count - answeredIds.size
+      if (remaining <= 0) {
+        await completeAttempt(attempt.id)
+        setAttempts((prev) =>
+          prev.map((a) => (a.id === attempt.id ? { ...a, completed_at: new Date().toISOString() } : a))
+        )
+        return
+      }
+
+      const categoryNameById = new Map(categories.map((c) => [c.id, c.name]))
+      const notAnswered = (q) => !answeredIds.has(q.id)
+      let questions = []
+
+      if (attempt.mode === 'national_test' && attempt.tag_filter) {
+        const pool = (await fetchQuestionsByTagName(attempt.tag_filter)).filter(notAnswered)
+        questions = selectPracticeQuestions({
+          questions: pool,
+          recentlyCorrectQuestionIds: recentlyCorrect,
+          count: remaining,
+        })
+      } else if (attempt.mode === 'practice' && attempt.category_filter) {
+        const byCat = await fetchQuestionsByCategory([attempt.category_filter], attempt.difficulty_filter || undefined)
+        const pool = (byCat.get(attempt.category_filter) ?? []).filter(notAnswered)
+        questions = selectPracticeQuestions({
+          questions: pool,
+          recentlyCorrectQuestionIds: recentlyCorrect,
+          count: remaining,
+        })
+      } else {
+        // adaptive (default)
+        const [stats, byCat] = await Promise.all([
+          fetchUserCategoryStats(user.id),
+          fetchQuestionsByCategory(categories.map((c) => c.id), attempt.difficulty_filter || undefined),
+        ])
+        const filtered = new Map()
+        for (const [catId, qs] of byCat) filtered.set(catId, qs.filter(notAnswered))
+        questions = selectAdaptiveQuestions({
+          categories,
+          statsByCategoryId: stats,
+          questionsByCategoryId: filtered,
+          recentlyCorrectQuestionIds: recentlyCorrect,
+          count: remaining,
+        })
+      }
+
+      if (questions.length === 0) {
+        // Nothing left to draw (pool exhausted) — just close it out.
+        await completeAttempt(attempt.id)
+        setAttempts((prev) =>
+          prev.map((a) => (a.id === attempt.id ? { ...a, completed_at: new Date().toISOString() } : a))
+        )
+        return
+      }
+
+      questions = questions.map((q) => ({ ...q, categoryName: categoryNameById.get(q.category_id) }))
+      navigate('/quiz/play', {
+        state: { attemptId: attempt.id, mode: attempt.mode, questions, showRuleRefs: false },
+      })
+    } catch (err) {
+      setActionError(err.message || 'Failed to resume the quiz.')
+    } finally {
+      setBusyAttemptId(null)
+    }
+  }
+
   if (loading) return <div className="page">Loading…</div>
 
   const categoryRows = categories
@@ -161,7 +260,18 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <SectionHeader>Attempt History</SectionHeader>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <SectionHeader>Attempt History</SectionHeader>
+        {attempts.some((a) => !a.completed_at) && (
+          <button
+            className="btn btn--sm btn--danger"
+            onClick={handleCancelAll}
+            disabled={busyAttemptId === 'all'}
+          >
+            {busyAttemptId === 'all' ? 'Cancelling…' : 'Cancel all in progress'}
+          </button>
+        )}
+      </div>
       {actionError && <p className="error-text">{actionError}</p>}
       {attempts.length === 0 ? (
         <p className="muted">No quizzes yet — start one above.</p>
@@ -187,18 +297,25 @@ export default function Dashboard() {
                 <td>{a.completed_at ? 'Completed' : 'In Progress'}</td>
                 <td>
                   {!a.completed_at && (
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                       <button
                         className="btn btn--sm"
+                        onClick={() => handleResume(a)}
+                        disabled={busyAttemptId === a.id || busyAttemptId === 'all'}
+                      >
+                        Resume
+                      </button>
+                      <button
+                        className="btn btn--sm btn--outline"
                         onClick={() => handleComplete(a.id)}
-                        disabled={busyAttemptId === a.id}
+                        disabled={busyAttemptId === a.id || busyAttemptId === 'all'}
                       >
                         Complete
                       </button>
                       <button
                         className="btn btn--sm btn--danger"
                         onClick={() => handleCancel(a.id)}
-                        disabled={busyAttemptId === a.id}
+                        disabled={busyAttemptId === a.id || busyAttemptId === 'all'}
                       >
                         Cancel
                       </button>

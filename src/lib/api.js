@@ -200,6 +200,29 @@ export async function cancelAttempt(attemptId) {
   if (error) throw error
 }
 
+// Discard every in-progress (not completed) attempt for a user in one shot.
+export async function cancelAllInProgressAttempts(userId) {
+  const { data, error } = await supabase
+    .from('attempts')
+    .delete()
+    .eq('user_id', userId)
+    .is('completed_at', null)
+    .select('id')
+  if (error) throw error
+  return data?.length ?? 0
+}
+
+// Question ids already answered within an attempt, so a resume doesn't re-ask
+// them (there's no unique constraint on attempt_answers, so we exclude by id).
+export async function fetchAnsweredQuestionIds(attemptId) {
+  const { data, error } = await supabase
+    .from('attempt_answers')
+    .select('question_id')
+    .eq('attempt_id', attemptId)
+  if (error) throw error
+  return new Set(data.map((r) => r.question_id))
+}
+
 export async function fetchAttemptHistory(userId) {
   const { data, error } = await supabase
     .from('attempts')
