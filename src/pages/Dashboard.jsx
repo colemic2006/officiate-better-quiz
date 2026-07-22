@@ -7,6 +7,8 @@ import {
   fetchAttemptHistory,
   fetchAccuracyTrend,
   computeStreakDays,
+  completeAttempt,
+  cancelAttempt,
 } from '../lib/api'
 import SectionHeader from '../components/SectionHeader.jsx'
 
@@ -57,6 +59,38 @@ export default function Dashboard() {
       cancelled = true
     }
   }, [user.id])
+
+  const [actionError, setActionError] = useState('')
+  const [busyAttemptId, setBusyAttemptId] = useState(null)
+
+  async function handleComplete(id) {
+    setActionError('')
+    setBusyAttemptId(id)
+    try {
+      await completeAttempt(id)
+      setAttempts((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, completed_at: new Date().toISOString() } : a))
+      )
+    } catch (err) {
+      setActionError(err.message || 'Failed to complete the quiz.')
+    } finally {
+      setBusyAttemptId(null)
+    }
+  }
+
+  async function handleCancel(id) {
+    if (!window.confirm('Cancel this in-progress quiz? It will be permanently removed from your history.')) return
+    setActionError('')
+    setBusyAttemptId(id)
+    try {
+      await cancelAttempt(id)
+      setAttempts((prev) => prev.filter((a) => a.id !== id))
+    } catch (err) {
+      setActionError(err.message || 'Failed to cancel the quiz.')
+    } finally {
+      setBusyAttemptId(null)
+    }
+  }
 
   if (loading) return <div className="page">Loading…</div>
 
@@ -128,6 +162,7 @@ export default function Dashboard() {
       </div>
 
       <SectionHeader>Attempt History</SectionHeader>
+      {actionError && <p className="error-text">{actionError}</p>}
       {attempts.length === 0 ? (
         <p className="muted">No quizzes yet — start one above.</p>
       ) : (
@@ -139,6 +174,7 @@ export default function Dashboard() {
               <th>Category</th>
               <th>Questions</th>
               <th>Status</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -149,6 +185,26 @@ export default function Dashboard() {
                 <td>{formatAttemptSource(a)}</td>
                 <td>{a.question_count}</td>
                 <td>{a.completed_at ? 'Completed' : 'In Progress'}</td>
+                <td>
+                  {!a.completed_at && (
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <button
+                        className="btn btn--sm"
+                        onClick={() => handleComplete(a.id)}
+                        disabled={busyAttemptId === a.id}
+                      >
+                        Complete
+                      </button>
+                      <button
+                        className="btn btn--sm btn--danger"
+                        onClick={() => handleCancel(a.id)}
+                        disabled={busyAttemptId === a.id}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

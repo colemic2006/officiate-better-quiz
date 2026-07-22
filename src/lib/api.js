@@ -193,6 +193,13 @@ export async function completeAttempt(attemptId) {
   if (error) throw error
 }
 
+// Discard an attempt entirely. attempt_answers cascade-delete with it, so an
+// abandoned in-progress quiz leaves no trace in history or stats.
+export async function cancelAttempt(attemptId) {
+  const { error } = await supabase.from('attempts').delete().eq('id', attemptId)
+  if (error) throw error
+}
+
 export async function fetchAttemptHistory(userId) {
   const { data, error } = await supabase
     .from('attempts')
