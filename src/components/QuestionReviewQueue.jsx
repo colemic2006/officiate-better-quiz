@@ -163,6 +163,10 @@ export default function QuestionReviewQueue({ categories, onClose }) {
         <p className="help-text" style={{ margin: 0 }}>
           Reviewed <strong>{reviewedCount}</strong> of <strong>{total}</strong> ({pct}%) · {remaining} remaining
         </p>
+        <p className="help-text" style={{ margin: '0.25rem 0 0' }}>
+          Explanations stay hidden from users until you mark a question reviewed — marking it complete publishes its
+          explanation. Rule references are always visible.
+        </p>
       </div>
 
       {/* Filters */}

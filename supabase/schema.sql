@@ -282,7 +282,10 @@ returns table (
   correct_choice char(1),
   rule_refs text,
   ar_refs text,
-  explanation text
+  explanation text,
+  -- Null until an admin marks the question reviewed. The front end only shows
+  -- the explanation once this is set, so unreviewed explanations stay hidden.
+  reviewed_at timestamptz
 )
 language sql
 security definer
@@ -290,7 +293,7 @@ set search_path = public
 as $$
   select q.id, q.external_id, c.name, q.difficulty, q.question_text,
     q.choice_a, q.choice_b, q.choice_c, q.choice_d, q.correct_choice,
-    q.rule_refs, q.ar_refs, q.explanation
+    q.rule_refs, q.ar_refs, q.explanation, q.reviewed_at
   from public.questions q
   join public.categories c on c.id = q.category_id
   where q.is_active = true

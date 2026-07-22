@@ -114,7 +114,7 @@ export default function QuizPlay() {
           <>
             <p>
               <strong>{selectedKey === question.correct_choice ? 'Correct! ' : 'Incorrect. '}</strong>
-              {question.explanation}
+              {question.reviewed_at && question.explanation}
             </p>
             {(question.rule_refs || question.ar_refs) && (
               <p className="help-text">

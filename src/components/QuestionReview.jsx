@@ -30,7 +30,7 @@ export default function QuestionReview({ question, categoryName, selectedKey, is
           )
         })}
       </div>
-      {question.explanation && (
+      {question.reviewed_at && question.explanation && (
         <p>
           <strong>Explanation: </strong>
           {question.explanation}
