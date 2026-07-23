@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { adminUpdateQuestion, adminSetQuestionTags } from '../lib/api'
 
 const DIFFICULTIES = ['Basic', 'Intermediate', 'Advanced']
@@ -50,6 +50,7 @@ export default function QuestionEditForm({
   categories,
   onSaved,
   onCancel,
+  onDirtyChange,
   saveLabel = 'Save Changes',
   savingLabel = 'Saving…',
   cancelLabel = 'Cancel',
@@ -57,6 +58,15 @@ export default function QuestionEditForm({
   const [form, setForm] = useState(() => buildFormState(question, tags))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  // Report whether the form differs from the value it opened with, so a parent
+  // (e.g. the review queue) can warn before an action that would discard edits.
+  const initialRef = useRef(null)
+  if (initialRef.current === null) initialRef.current = JSON.stringify(buildFormState(question, tags))
+  const isDirty = JSON.stringify(form) !== initialRef.current
+  useEffect(() => {
+    onDirtyChange?.(isDirty)
+  }, [isDirty])
 
   function set(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }))

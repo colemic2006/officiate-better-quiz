@@ -10,9 +10,10 @@ import QuestionEditForm from './QuestionEditForm.jsx'
 // Sequential editorial review: walk every question (optionally within one
 // category), edit as needed, and mark each complete. Progress and completion
 // persist in the DB (questions.reviewed_at), so the admin can stop and resume.
-export default function QuestionReviewQueue({ categories, onClose }) {
+export default function QuestionReviewQueue({ categories, onClose, initialExternalId }) {
   const [categoryFilter, setCategoryFilter] = useState('')
   const [onlyUnreviewed, setOnlyUnreviewed] = useState(false)
+  const [formDirty, setFormDirty] = useState(false)
 
   const [queue, setQueue] = useState([])
   const [queueLoading, setQueueLoading] = useState(true)
@@ -40,8 +41,11 @@ export default function QuestionReviewQueue({ categories, onClose }) {
       .then((rows) => {
         if (cancelled) return
         setQueue(rows)
+        // Jump to a specific question if one was requested (e.g. opened from a
+        // flag); otherwise start at the first unreviewed one (resume point).
+        const target = initialExternalId && rows.find((q) => q.external_id === initialExternalId)
         const firstUnreviewed = rows.find((q) => !q.reviewed_at)
-        setCurrentId((firstUnreviewed || rows[0])?.id ?? null)
+        setCurrentId((target || firstUnreviewed || rows[0])?.id ?? null)
       })
       .catch((err) => !cancelled && setError(err.message || 'Failed to load the review queue.'))
       .finally(() => !cancelled && setQueueLoading(false))
@@ -114,6 +118,17 @@ export default function QuestionReviewQueue({ categories, onClose }) {
     } finally {
       setMarking(false)
     }
+  }
+
+  // "Mark reviewed (no edits)" and "Skip" both throw away anything typed in the
+  // form, so warn first if there are unsaved edits.
+  function markNoEdits() {
+    if (formDirty && !window.confirm('You have unsaved edits in this question. They will be discarded. Mark it reviewed without saving them?')) return
+    setReviewed(true, true)
+  }
+  function skipQuestion() {
+    if (formDirty && !window.confirm('You have unsaved edits in this question. Skip to the next one without saving them?')) return
+    step(1)
   }
 
   // After completing the current one, move to the next still-unreviewed
@@ -246,7 +261,7 @@ export default function QuestionReviewQueue({ categories, onClose }) {
                 {marking ? 'Working…' : 'Unmark reviewed'}
               </button>
             ) : (
-              <button className="btn btn--sm" onClick={() => setReviewed(true, true)} disabled={marking}>
+              <button className="btn btn--sm" onClick={markNoEdits} disabled={marking}>
                 {marking ? 'Working…' : 'Mark reviewed (no edits) →'}
               </button>
             )}
@@ -262,7 +277,8 @@ export default function QuestionReviewQueue({ categories, onClose }) {
               tags={currentTags}
               categories={categories}
               onSaved={handleFormSaved}
-              onCancel={() => step(1)}
+              onCancel={skipQuestion}
+              onDirtyChange={setFormDirty}
               saveLabel="Save & Mark Reviewed →"
               savingLabel="Saving…"
               cancelLabel="Skip (no changes) →"

@@ -37,6 +37,15 @@ export default function Admin() {
   const [usersVisible, setUsersVisible] = useState(false)
 
   const [reviewOpen, setReviewOpen] = useState(false)
+  const [reviewTarget, setReviewTarget] = useState(null)
+  const reviewSectionRef = useRef(null)
+
+  function openReview(externalId) {
+    setReviewTarget(externalId || null)
+    setReviewOpen(true)
+    // Let the section render, then scroll it into view.
+    setTimeout(() => reviewSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
+  }
 
   async function load() {
     const [c, f] = await Promise.all([fetchPendingComments(), fetchOpenFlags()])
@@ -119,16 +128,24 @@ export default function Admin() {
 
   return (
     <div className="page">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+      <div ref={reviewSectionRef} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
         <SectionHeader>Editorial Review</SectionHeader>
         {!reviewOpen && (
-          <button className="btn btn--sm" onClick={() => setReviewOpen(true)}>
+          <button className="btn btn--sm" onClick={() => openReview(null)}>
             Start / Resume Review
           </button>
         )}
       </div>
       {reviewOpen ? (
-        <QuestionReviewQueue categories={categories} onClose={() => setReviewOpen(false)} />
+        <QuestionReviewQueue
+          key={reviewTarget || 'resume'}
+          categories={categories}
+          initialExternalId={reviewTarget}
+          onClose={() => {
+            setReviewOpen(false)
+            setReviewTarget(null)
+          }}
+        />
       ) : (
         <p className="muted">
           Walk through every question one at a time — edit as needed and mark each complete. Your progress is saved,
@@ -202,7 +219,14 @@ export default function Admin() {
                 <td>{c.profile?.display_name}</td>
                 <td>{c.comment_text}</td>
                 <td>{new Date(c.created_at).toLocaleString()}</td>
-                <td style={{ display: 'flex', gap: '0.4rem' }}>
+                <td style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  <button
+                    className="btn btn--sm btn--outline"
+                    onClick={() => openReview(c.question?.external_id)}
+                    disabled={!c.question?.external_id}
+                  >
+                    Review
+                  </button>
                   <button className="btn btn--sm" onClick={() => handleModerate(c.id, 'approved')}>
                     Approve
                   </button>
@@ -237,7 +261,14 @@ export default function Admin() {
                 <td>{f.profile?.display_name}</td>
                 <td>{f.reason}</td>
                 <td>{new Date(f.created_at).toLocaleString()}</td>
-                <td style={{ display: 'flex', gap: '0.4rem' }}>
+                <td style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  <button
+                    className="btn btn--sm btn--outline"
+                    onClick={() => openReview(f.question?.external_id)}
+                    disabled={!f.question?.external_id}
+                  >
+                    Review
+                  </button>
                   <button className="btn btn--sm" onClick={() => handleResolve(f.id, 'resolved')}>
                     Resolve
                   </button>
