@@ -435,16 +435,35 @@ export async function adminSetQuestionTags(questionId, tagNames) {
 // Admin: editorial review workflow
 // ---------------------------------------------------------------------------
 
-// Lightweight ordered list of every question (optionally within one category)
-// used to drive the review queue: progress counts, position, and navigation.
-// Only the columns the queue needs, paged past the 1000-row cap.
-export async function fetchReviewQueue({ categoryId = null } = {}) {
+// Lightweight ordered list of every question (optionally within one category,
+// and/or carrying a specific tag) used to drive the review queue: progress
+// counts, position, and navigation. Only the columns the queue needs, paged
+// past the 1000-row cap.
+export async function fetchReviewQueue({ categoryId = null, tagName = null } = {}) {
+  let questionIds = null
+  if (tagName) {
+    // Resolve the tag to the set of question ids that carry it, so the queue
+    // can be scoped to (e.g.) just the machine-generated rule references.
+    const { data: tag, error: tagErr } = await supabase
+      .from('tags')
+      .select('id')
+      .eq('name', tagName)
+      .maybeSingle()
+    if (tagErr) throw tagErr
+    if (!tag) return []
+    const links = await fetchAllRows(() =>
+      supabase.from('question_tags').select('question_id').eq('tag_id', tag.id)
+    )
+    questionIds = links.map((l) => l.question_id)
+    if (questionIds.length === 0) return []
+  }
   return fetchAllRows(() => {
     let q = supabase
       .from('questions')
       .select('id, external_id, reviewed_at, category_id')
       .order('external_id', { ascending: true })
     if (categoryId) q = q.eq('category_id', categoryId)
+    if (questionIds) q = q.in('id', questionIds)
     return q
   })
 }

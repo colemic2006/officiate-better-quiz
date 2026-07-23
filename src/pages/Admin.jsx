@@ -38,10 +38,12 @@ export default function Admin() {
 
   const [reviewOpen, setReviewOpen] = useState(false)
   const [reviewTarget, setReviewTarget] = useState(null)
+  const [reviewAiRefs, setReviewAiRefs] = useState(false)
   const reviewSectionRef = useRef(null)
 
-  function openReview(externalId) {
+  function openReview(externalId, aiRefs = false) {
     setReviewTarget(externalId || null)
+    setReviewAiRefs(aiRefs)
     setReviewOpen(true)
     // Let the section render, then scroll it into view.
     setTimeout(() => reviewSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
@@ -131,19 +133,26 @@ export default function Admin() {
       <div ref={reviewSectionRef} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
         <SectionHeader>Editorial Review</SectionHeader>
         {!reviewOpen && (
-          <button className="btn btn--sm" onClick={() => openReview(null)}>
-            Start / Resume Review
-          </button>
+          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+            <button className="btn btn--sm" onClick={() => openReview(null)}>
+              Start / Resume Review
+            </button>
+            <button className="btn btn--sm btn--outline" onClick={() => openReview(null, true)}>
+              Review AI rule refs
+            </button>
+          </div>
         )}
       </div>
       {reviewOpen ? (
         <QuestionReviewQueue
-          key={reviewTarget || 'resume'}
+          key={reviewAiRefs ? 'ai-refs' : reviewTarget || 'resume'}
           categories={categories}
           initialExternalId={reviewTarget}
+          initialAiRefs={reviewAiRefs}
           onClose={() => {
             setReviewOpen(false)
             setReviewTarget(null)
+            setReviewAiRefs(false)
           }}
         />
       ) : (

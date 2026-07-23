@@ -10,9 +10,10 @@ import QuestionEditForm from './QuestionEditForm.jsx'
 // Sequential editorial review: walk every question (optionally within one
 // category), edit as needed, and mark each complete. Progress and completion
 // persist in the DB (questions.reviewed_at), so the admin can stop and resume.
-export default function QuestionReviewQueue({ categories, onClose, initialExternalId }) {
+export default function QuestionReviewQueue({ categories, onClose, initialExternalId, initialAiRefs = false }) {
   const [categoryFilter, setCategoryFilter] = useState('')
   const [onlyUnreviewed, setOnlyUnreviewed] = useState(false)
+  const [onlyAiRefs, setOnlyAiRefs] = useState(initialAiRefs)
   const [formDirty, setFormDirty] = useState(false)
 
   const [queue, setQueue] = useState([])
@@ -37,7 +38,10 @@ export default function QuestionReviewQueue({ categories, onClose, initialExtern
     let cancelled = false
     setQueueLoading(true)
     setError('')
-    fetchReviewQueue({ categoryId: categoryFilter ? Number(categoryFilter) : null })
+    fetchReviewQueue({
+      categoryId: categoryFilter ? Number(categoryFilter) : null,
+      tagName: onlyAiRefs ? 'ai-rule-refs' : null,
+    })
       .then((rows) => {
         if (cancelled) return
         setQueue(rows)
@@ -52,7 +56,7 @@ export default function QuestionReviewQueue({ categories, onClose, initialExtern
     return () => {
       cancelled = true
     }
-  }, [categoryFilter])
+  }, [categoryFilter, onlyAiRefs])
 
   // Load the full row + tags for whichever question is current.
   useEffect(() => {
@@ -203,7 +207,21 @@ export default function QuestionReviewQueue({ categories, onClose, initialExtern
             Step through unreviewed only
           </label>
         </div>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 400 }}>
+            <input type="checkbox" checked={onlyAiRefs} onChange={(e) => setOnlyAiRefs(e.target.checked)} />
+            AI-created rule references only
+          </label>
+        </div>
       </div>
+
+      {onlyAiRefs && (
+        <p className="help-text" style={{ margin: '0 0 0.5rem' }}>
+          These questions had no rule reference, so one was generated automatically and tagged{' '}
+          <code>ai-rule-refs</code>. Verify each reference against the rulebook — correct it if needed, then remove the{' '}
+          <code>ai-rule-refs</code> tag (in the Tags field) and Save to clear it from this list.
+        </p>
+      )}
 
       {error && <p className="error-text">{error}</p>}
 
@@ -234,6 +252,11 @@ export default function QuestionReviewQueue({ categories, onClose, initialExtern
               ) : (
                 <span className="badge" style={{ background: '#c0392b', color: '#fff' }}>
                   Not reviewed
+                </span>
+              )}
+              {currentTags.includes('ai-rule-refs') && (
+                <span className="badge" style={{ background: '#8e44ad', color: '#fff' }} title="Rule reference was generated automatically — verify it.">
+                  AI rule ref — verify
                 </span>
               )}
             </div>
