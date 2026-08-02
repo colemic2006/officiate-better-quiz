@@ -336,13 +336,15 @@ export async function resolveFlag(id, status) {
 
 const ADMIN_SEARCH_LIMIT = 50
 
-export async function adminSearchQuestions({ search, categoryId, includeInactive, limit = ADMIN_SEARCH_LIMIT } = {}) {
+// status: 'active' (default) | 'inactive' | 'all'
+export async function adminSearchQuestions({ search, categoryId, status = 'active', limit = ADMIN_SEARCH_LIMIT } = {}) {
   let query = supabase
     .from('questions')
     .select('*, category:categories(name)')
     .order('external_id')
     .limit(limit)
-  if (!includeInactive) query = query.eq('is_active', true)
+  if (status === 'active') query = query.eq('is_active', true)
+  else if (status === 'inactive') query = query.eq('is_active', false)
   if (categoryId) query = query.eq('category_id', categoryId)
   if (search) {
     const term = search.trim().replace(/[%,]/g, '')

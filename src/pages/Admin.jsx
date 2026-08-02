@@ -23,7 +23,7 @@ export default function Admin() {
   const [categories, setCategories] = useState([])
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
-  const [includeInactive, setIncludeInactive] = useState(false)
+  const [statusFilter, setStatusFilter] = useState('active') // 'active' | 'inactive' | 'all'
   const [questions, setQuestions] = useState([])
   const [tagsByQuestionId, setTagsByQuestionId] = useState(new Map())
   const [questionsLoading, setQuestionsLoading] = useState(false)
@@ -97,7 +97,7 @@ export default function Admin() {
       const rows = await adminSearchQuestions({
         search,
         categoryId: categoryFilter ? Number(categoryFilter) : null,
-        includeInactive,
+        status: statusFilter,
       })
       const tagMap = await fetchTagsForQuestions(rows.map((r) => r.id))
       setQuestions(rows)
@@ -319,11 +319,13 @@ export default function Admin() {
             ))}
           </select>
         </div>
-        <div className="field" style={{ marginBottom: 0 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 400 }}>
-            <input type="checkbox" checked={includeInactive} onChange={(e) => setIncludeInactive(e.target.checked)} />
-            Include inactive
-          </label>
+        <div className="field" style={{ flex: '0 1 160px', marginBottom: 0 }}>
+          <label htmlFor="q-status">Status</label>
+          <select id="q-status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="active">Active only</option>
+            <option value="inactive">Inactive only</option>
+            <option value="all">All</option>
+          </select>
         </div>
         <button className="btn btn--sm" type="submit" disabled={questionsLoading}>
           {questionsLoading ? 'Searching…' : 'Search'}
