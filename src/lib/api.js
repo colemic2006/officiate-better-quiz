@@ -315,7 +315,7 @@ export async function fetchOpenFlags() {
     .from('question_flags')
     .select('*, question:questions(question_text, external_id), profile:profiles(display_name)')
     .eq('status', 'open')
-    .order('created_at')
+    .order('created_at', { ascending: false }) // most recently flagged first
   if (error) throw error
   return data
 }
