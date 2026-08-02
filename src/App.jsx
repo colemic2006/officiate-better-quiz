@@ -44,7 +44,7 @@ export default function App() {
         const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0
         setStats([
           { label: 'Categories', value: categories.length },
-          { label: 'Questions in Bank', value: questionCount },
+          { label: 'Questions in Rotation', value: questionCount },
           { label: 'Your Accuracy', value: `${accuracy}%` },
           { label: 'Current Streak', value: computeStreakDays(attempts) },
         ])
