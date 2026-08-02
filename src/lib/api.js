@@ -500,7 +500,21 @@ export async function markQuestionReviewed(id, reviewed) {
     .select('*, category:categories(name)')
     .single()
   if (error) throw error
-  return data
+
+  // Reviewing a question clears any open reports on it — the review is the
+  // resolution. Report how many were resolved so the caller can refresh lists.
+  let resolvedFlagCount = 0
+  if (reviewed) {
+    const { data: resolved, error: flagErr } = await supabase
+      .from('question_flags')
+      .update({ status: 'resolved' })
+      .eq('question_id', id)
+      .eq('status', 'open')
+      .select('id')
+    if (flagErr) throw flagErr
+    resolvedFlagCount = resolved?.length ?? 0
+  }
+  return { ...data, resolvedFlagCount }
 }
 
 // ---------------------------------------------------------------------------

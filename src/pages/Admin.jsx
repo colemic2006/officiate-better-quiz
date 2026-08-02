@@ -153,6 +153,7 @@ export default function Admin() {
           categories={categories}
           initialExternalId={reviewTarget}
           initialAiRefs={reviewAiRefs}
+          onReviewed={load}
           onClose={() => {
             setReviewOpen(false)
             setReviewTarget(null)

@@ -10,7 +10,7 @@ import QuestionEditForm from './QuestionEditForm.jsx'
 // Sequential editorial review: walk every question (optionally within one
 // category), edit as needed, and mark each complete. Progress and completion
 // persist in the DB (questions.reviewed_at), so the admin can stop and resume.
-export default function QuestionReviewQueue({ categories, onClose, initialExternalId, initialAiRefs = false }) {
+export default function QuestionReviewQueue({ categories, onClose, initialExternalId, initialAiRefs = false, onReviewed }) {
   const [categoryFilter, setCategoryFilter] = useState('')
   const [onlyUnreviewed, setOnlyUnreviewed] = useState(false)
   const [onlyAiRefs, setOnlyAiRefs] = useState(initialAiRefs)
@@ -116,6 +116,7 @@ export default function QuestionReviewQueue({ categories, onClose, initialExtern
     try {
       const updated = await markQuestionReviewed(currentId, reviewed)
       markLocally(currentId, updated.reviewed_at)
+      if (updated.resolvedFlagCount > 0) onReviewed?.()
       if (advance && reviewed) advanceAfterComplete()
     } catch (err) {
       setError(err.message || 'Failed to update review status.')
@@ -155,6 +156,7 @@ export default function QuestionReviewQueue({ categories, onClose, initialExtern
     try {
       const marked = await markQuestionReviewed(updated.id, true)
       markLocally(updated.id, marked.reviewed_at)
+      if (marked.resolvedFlagCount > 0) onReviewed?.()
       advanceAfterComplete()
     } catch (err) {
       setError(err.message || 'Saved, but failed to mark reviewed.')
