@@ -196,8 +196,27 @@ async function main() {
     console.log(`Added ${inserted.length} new tag(s): ${inserted.map((t) => t.name).join(', ')}`)
   }
 
-  console.log(`Upserting ${validRows.length} question(s) ...`)
-  const questionPayload = validRows.map(({ rowNum, tags, ...q }) => q)
+  // Newly imported questions must land OUT OF ROTATION (is_active = false) and
+  // only go live once an admin marks them reviewed. Existing questions keep
+  // whatever is_active they already have (so this ingest never silently
+  // re-activates something an admin deactivated, nor deactivates a live one).
+  const existingActive = new Map()
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase
+      .from('questions')
+      .select('external_id, is_active')
+      .range(from, from + 999)
+    if (error) fail(`Could not load existing questions: ${error.message}`)
+    for (const q of data) existingActive.set(q.external_id, q.is_active)
+    if (data.length < 1000) break
+  }
+  const newCount = validRows.filter((r) => !existingActive.has(r.external_id)).length
+
+  console.log(`Upserting ${validRows.length} question(s) (${newCount} new -> pending review) ...`)
+  const questionPayload = validRows.map(({ rowNum, tags, ...q }) => ({
+    ...q,
+    is_active: existingActive.has(q.external_id) ? existingActive.get(q.external_id) : false,
+  }))
   const { data: upserted, error: upsertErr } = await supabase
     .from('questions')
     .upsert(questionPayload, { onConflict: 'external_id' })

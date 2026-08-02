@@ -480,7 +480,10 @@ export async function fetchQuestionById(id) {
 }
 
 // Mark a question reviewed (or clear it). Stamps who/when so the admin view
-// can show sign-off. Relies on the "questions: admin update" RLS policy.
+// can show sign-off. Marking reviewed also puts the question into rotation
+// (is_active = true) and unmarking pulls it back out, so newly imported
+// questions stay hidden from quizzes until they've been reviewed.
+// Relies on the "questions: admin update" RLS policy.
 export async function markQuestionReviewed(id, reviewed) {
   const {
     data: { user },
@@ -490,6 +493,7 @@ export async function markQuestionReviewed(id, reviewed) {
     .update({
       reviewed_at: reviewed ? new Date().toISOString() : null,
       reviewed_by: reviewed ? user?.id ?? null : null,
+      is_active: reviewed,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
