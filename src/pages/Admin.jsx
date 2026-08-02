@@ -39,11 +39,15 @@ export default function Admin() {
   const [reviewOpen, setReviewOpen] = useState(false)
   const [reviewTarget, setReviewTarget] = useState(null)
   const [reviewAiRefs, setReviewAiRefs] = useState(false)
+  // Bumped on every openReview call so the queue remounts and re-jumps even
+  // when it's already open on the same target (e.g. re-clicking a flag).
+  const [reviewNonce, setReviewNonce] = useState(0)
   const reviewSectionRef = useRef(null)
 
   function openReview(externalId, aiRefs = false) {
     setReviewTarget(externalId || null)
     setReviewAiRefs(aiRefs)
+    setReviewNonce((n) => n + 1)
     setReviewOpen(true)
     // Let the section render, then scroll it into view.
     setTimeout(() => reviewSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
@@ -145,7 +149,7 @@ export default function Admin() {
       </div>
       {reviewOpen ? (
         <QuestionReviewQueue
-          key={reviewAiRefs ? 'ai-refs' : reviewTarget || 'resume'}
+          key={`${reviewAiRefs ? 'ai-refs' : reviewTarget || 'resume'}-${reviewNonce}`}
           categories={categories}
           initialExternalId={reviewTarget}
           initialAiRefs={reviewAiRefs}
