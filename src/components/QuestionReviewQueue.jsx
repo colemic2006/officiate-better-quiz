@@ -14,6 +14,7 @@ export default function QuestionReviewQueue({ categories, onClose, initialExtern
   const [categoryFilter, setCategoryFilter] = useState('')
   const [onlyUnreviewed, setOnlyUnreviewed] = useState(false)
   const [onlyAiRefs, setOnlyAiRefs] = useState(initialAiRefs)
+  const [onlyInactive, setOnlyInactive] = useState(false)
   const [formDirty, setFormDirty] = useState(false)
 
   const [queue, setQueue] = useState([])
@@ -41,6 +42,7 @@ export default function QuestionReviewQueue({ categories, onClose, initialExtern
     fetchReviewQueue({
       categoryId: categoryFilter ? Number(categoryFilter) : null,
       tagName: onlyAiRefs ? 'ai-rule-refs' : null,
+      onlyInactive,
     })
       .then((rows) => {
         if (cancelled) return
@@ -56,7 +58,7 @@ export default function QuestionReviewQueue({ categories, onClose, initialExtern
     return () => {
       cancelled = true
     }
-  }, [categoryFilter, onlyAiRefs])
+  }, [categoryFilter, onlyAiRefs, onlyInactive])
 
   // Load the full row + tags for whichever question is current.
   useEffect(() => {
@@ -215,6 +217,12 @@ export default function QuestionReviewQueue({ categories, onClose, initialExtern
             AI-created rule references only
           </label>
         </div>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 400 }}>
+            <input type="checkbox" checked={onlyInactive} onChange={(e) => setOnlyInactive(e.target.checked)} />
+            Not in rotation (inactive) only
+          </label>
+        </div>
       </div>
 
       {onlyAiRefs && (
@@ -259,6 +267,11 @@ export default function QuestionReviewQueue({ categories, onClose, initialExtern
               {currentTags.includes('ai-rule-refs') && (
                 <span className="badge" style={{ background: '#8e44ad', color: '#fff' }} title="Rule reference was generated automatically — verify it.">
                   AI rule ref — verify
+                </span>
+              )}
+              {current && current.is_active === false && (
+                <span className="badge" style={{ background: '#7f8c8d', color: '#fff' }} title="Out of rotation — marking it reviewed puts it into quizzes.">
+                  Not in rotation
                 </span>
               )}
             </div>

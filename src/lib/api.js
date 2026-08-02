@@ -439,7 +439,7 @@ export async function adminSetQuestionTags(questionId, tagNames) {
 // and/or carrying a specific tag) used to drive the review queue: progress
 // counts, position, and navigation. Only the columns the queue needs, paged
 // past the 1000-row cap.
-export async function fetchReviewQueue({ categoryId = null, tagName = null } = {}) {
+export async function fetchReviewQueue({ categoryId = null, tagName = null, onlyInactive = false } = {}) {
   let questionIds = null
   if (tagName) {
     // Resolve the tag to the set of question ids that carry it, so the queue
@@ -460,10 +460,11 @@ export async function fetchReviewQueue({ categoryId = null, tagName = null } = {
   return fetchAllRows(() => {
     let q = supabase
       .from('questions')
-      .select('id, external_id, reviewed_at, category_id')
+      .select('id, external_id, reviewed_at, category_id, is_active')
       .order('external_id', { ascending: true })
     if (categoryId) q = q.eq('category_id', categoryId)
     if (questionIds) q = q.in('id', questionIds)
+    if (onlyInactive) q = q.eq('is_active', false)
     return q
   })
 }
